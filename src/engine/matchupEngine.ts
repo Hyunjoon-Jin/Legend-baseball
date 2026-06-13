@@ -93,7 +93,7 @@ export function simulateAtBat(
         baseRunningEvents.push(...applied.events);
         outsOnBases++;
         if (outsAvailable() <= 0) {
-          return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, 3);
+          return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, outsOnBases);
         }
       }
     }
@@ -109,7 +109,7 @@ export function simulateAtBat(
         if (outcome === 'caughtStealing') {
           outsOnBases++;
           if (outsAvailable() <= 0) {
-            return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, 3);
+            return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, outsOnBases);
           }
         }
       }

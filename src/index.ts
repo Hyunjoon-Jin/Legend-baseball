@@ -3,6 +3,7 @@ export * from './types/baserunning.js';
 export * from './types/situation.js';
 export * from './types/zone.js';
 export * from './types/outcome.js';
+export * from './types/game.js';
 
 export * from './engine/pitchSelection.js';
 export * from './engine/swingDecision.js';
@@ -11,6 +12,8 @@ export * from './engine/battedBall.js';
 export * from './engine/outcomeMapper.js';
 export * from './engine/baserunning.js';
 export * from './engine/matchupEngine.js';
+export * from './engine/inningEngine.js';
+export * from './engine/gameEngine.js';
 
 export * from './mapper/leagueBaselines.js';
 export * from './mapper/statsToAttributes.js';
