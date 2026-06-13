@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { simulateAtBat } from './matchupEngine.js';
-import { sampleBatter, samplePitcher, sampleSituation } from '../data/samplePlayers.js';
+import { sampleBatter, samplePitcher, sampleSituation, sampleSituationWithRunners } from '../data/samplePlayers.js';
 import { OUTCOME_CATEGORY } from '../types/outcome.js';
 import { isInStrikeZone } from '../types/zone.js';
 
@@ -101,4 +101,52 @@ test('strikeouts and walks have no batted ball profile', () => {
       assert.equal(result.basesReached === 1 || result.basesReached === 0, true);
     }
   }
+});
+
+test('home runs always score every existing runner plus the batter', () => {
+  const rng = mulberry32(2024);
+  let checked = 0;
+  for (let i = 0; i < 5000 && checked < 10; i++) {
+    const result = simulateAtBat(samplePitcher, sampleBatter, sampleSituationWithRunners, rng);
+    if (result.result === 'homeRun' || result.result === 'insideTheParkHomeRun') {
+      // 2 existing runners (first + second) minus any removed by a caught
+      // stealing/pickoff earlier in the at-bat, plus the batter himself.
+      const removed = result.baseRunningEvents.filter((e) => e.type === 'caughtStealing' || e.type === 'pickoff').length;
+      assert.equal(result.runsScored, 2 - removed + 1);
+      assert.deepEqual(result.finalRunners, {});
+      checked++;
+    }
+  }
+});
+
+test('outsRecorded never exceeds 3, and double/triple plays record at least their own outs', () => {
+  const rng = mulberry32(13);
+  for (let i = 0; i < 500; i++) {
+    const result = simulateAtBat(samplePitcher, sampleBatter, sampleSituationWithRunners, rng);
+    assert.ok(result.outsRecorded >= 0 && result.outsRecorded <= 3);
+    if (result.result === 'doublePlay') {
+      assert.ok(result.outsRecorded >= 2);
+      assert.equal(result.runsScored, 0);
+    }
+    if (result.result === 'triplePlay') {
+      assert.equal(result.outsRecorded, 3);
+      assert.deepEqual(result.finalRunners, {});
+    }
+  }
+});
+
+test('caught stealing on the bases is reflected in baseRunningEvents', () => {
+  const rng = mulberry32(777);
+  let sawSteal = false;
+  for (let i = 0; i < 300; i++) {
+    const result = simulateAtBat(samplePitcher, sampleBatter, sampleSituationWithRunners, rng);
+    if (result.baseRunningEvents.some((e) => e.type === 'stolenBaseAttempt')) {
+      sawSteal = true;
+      const attempt = result.baseRunningEvents.find((e) => e.type === 'stolenBaseAttempt')!;
+      const success = result.baseRunningEvents.some((e) => e.type === 'stolenBaseSuccess' && e.runnerId === attempt.runnerId);
+      const caught = result.baseRunningEvents.some((e) => e.type === 'caughtStealing' && e.runnerId === attempt.runnerId);
+      assert.ok(success || caught);
+    }
+  }
+  assert.ok(sawSteal, 'expected at least one stolen base attempt across 300 at-bats with runners on base');
 });

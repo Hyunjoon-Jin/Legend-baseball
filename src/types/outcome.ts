@@ -1,5 +1,6 @@
 import type { PitchType } from './player.js';
 import type { ZoneLocation } from './zone.js';
+import type { BaseRunningEvent, BaseRunners } from './baserunning.js';
 
 /** Result of a single pitch. */
 export type PitchResult =
@@ -40,7 +41,13 @@ export type PlateAppearanceResult =
   | 'sacrificeBunt'
   | 'fieldersChoice'
   | 'reachedOnError'
-  | 'catcherInterference';
+  | 'catcherInterference'
+  /**
+   * The half-inning ended on a caught-stealing or pickoff before this
+   * plate appearance was completed. The batter's count/at-bat should be
+   * resumed at the start of his next plate appearance.
+   */
+  | 'inningEndingCaughtStealing';
 
 /** Coarse category used for stat aggregation / display grouping. */
 export type OutcomeCategory = 'hit' | 'out' | 'walk' | 'strikeout' | 'hitByPitch' | 'other';
@@ -68,6 +75,38 @@ export const OUTCOME_CATEGORY: Record<PlateAppearanceResult, OutcomeCategory> = 
   fieldersChoice: 'out',
   reachedOnError: 'other',
   catcherInterference: 'other',
+  inningEndingCaughtStealing: 'other',
+};
+
+/**
+ * Number of outs the batter's own result contributes (independent of
+ * any additional baserunning outs from caught-stealing/pickoffs/DPs
+ * that are tracked separately in `outsOnBases`).
+ */
+export const BATTER_OUTS: Record<PlateAppearanceResult, number> = {
+  strikeoutSwinging: 1,
+  strikeoutLooking: 1,
+  walk: 0,
+  intentionalWalk: 0,
+  hitByPitch: 0,
+  single: 0,
+  infieldSingle: 0,
+  double: 0,
+  triple: 0,
+  homeRun: 0,
+  insideTheParkHomeRun: 0,
+  groundOut: 1,
+  flyOut: 1,
+  lineOut: 1,
+  popOut: 1,
+  doublePlay: 2,
+  triplePlay: 3,
+  sacrificeFly: 1,
+  sacrificeBunt: 1,
+  fieldersChoice: 1,
+  reachedOnError: 0,
+  catcherInterference: 0,
+  inningEndingCaughtStealing: 0,
 };
 
 /** Detail record for a single pitch thrown during the at-bat. */
@@ -101,6 +140,16 @@ export interface AtBatResult {
   battedBall?: BattedBallProfile;
   /** Number of bases the batter reached (0-4, 4 = home run). */
   basesReached: 0 | 1 | 2 | 3 | 4;
-  /** Runs scored on this play (not counting the batter, unless inside-the-park HR etc). */
-  runsScoredEstimate: number;
+  /** Total runs that scored on this play, including the batter himself on a home run. */
+  runsScored: number;
+  /** Runner occupancy after this play resolves (does not include the batter unless he reached base). */
+  finalRunners: BaseRunners;
+  /** Detailed log of stolen base attempts, pickoffs, and baserunner advancement. */
+  baseRunningEvents: BaseRunningEvent[];
+  /**
+   * Total outs recorded on this play, including the batter's own out (if
+   * any) and any additional outs on the bases (caught stealing, pickoffs,
+   * double/triple plays). Ranges 0-3.
+   */
+  outsRecorded: 0 | 1 | 2 | 3;
 }

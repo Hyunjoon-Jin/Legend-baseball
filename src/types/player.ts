@@ -47,6 +47,8 @@ export interface PitcherAttributes {
   groundBallTendency: number;
   /** How well the pitcher mixes/sequences pitches to avoid predictability, 0-100. */
   sequencingSkill: number;
+  /** Pickoff move quality / quickness to the plate, 0-100. Suppresses opposing steal attempts and success. */
+  holdRunnerRating: number;
 }
 
 export interface BatterAttributes {
@@ -65,6 +67,10 @@ export interface BatterAttributes {
   badBallHitting: number;
   /** Sprint speed, 0-100. Used for infield-hit / extra-base / DP avoidance. */
   speed: number;
+  /** Pure stolen-base skill (jump, slide, technique), 0-100. */
+  stealRating: number;
+  /** Baserunning IQ / aggressiveness on extra-base advancement and steal decisions, 0-100. */
+  baserunningAggressiveness: number;
   swingType: 'upper' | 'level' | 'down';
   /** Tendency to pull the ball, 0-100 (50 = balanced). */
   pullTendency: number;

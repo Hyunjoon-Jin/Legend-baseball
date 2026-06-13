@@ -1,4 +1,5 @@
 import type { BatterAttributes, PitcherAttributes } from '../types/player.js';
+import { defaultDefense } from '../types/baserunning.js';
 import { defaultBallpark, defaultWeather, type GameSituation } from '../types/situation.js';
 
 export const samplePitcher: PitcherAttributes = {
@@ -12,6 +13,7 @@ export const samplePitcher: PitcherAttributes = {
   recovery: 60,
   groundBallTendency: 55,
   sequencingSkill: 58,
+  holdRunnerRating: 55,
   repertoire: [
     { type: 'fourSeam', velocity: 152, movement: 55, control: 65, usageRate: 0.4, groundBallTendency: 35 },
     { type: 'slider', velocity: 134, movement: 70, control: 60, usageRate: 0.25, groundBallTendency: 45 },
@@ -31,10 +33,12 @@ export const sampleBatter: BatterAttributes = {
   plateDiscipline: 58,
   badBallHitting: 50,
   speed: 60,
+  stealRating: 58,
+  baserunningAggressiveness: 55,
   swingType: 'upper',
   pullTendency: 62,
   clutch: 55,
-}
+};
 
 export const sampleSituation: GameSituation = {
   inning: 5,
@@ -43,10 +47,20 @@ export const sampleSituation: GameSituation = {
   balls: 0,
   strikes: 0,
   scoreDiff: 0,
-  runners: { first: false, second: false, third: false },
+  runners: {},
   pitcherPitchCount: 45,
   pitcherCondition: 55,
   batterCondition: 50,
   weather: defaultWeather,
   ballpark: defaultBallpark,
+  defense: defaultDefense,
+};
+
+/** A situation with runners on first and second, no outs - useful for testing baserunning. */
+export const sampleSituationWithRunners: GameSituation = {
+  ...sampleSituation,
+  runners: {
+    first: { runnerId: 'r001', speed: 65, stealRating: 60, baserunningAggressiveness: 55 },
+    second: { runnerId: 'r002', speed: 50, stealRating: 45, baserunningAggressiveness: 50 },
+  },
 };

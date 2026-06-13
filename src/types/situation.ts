@@ -1,3 +1,5 @@
+import type { BaseRunners, DefensiveTeamRatings } from './baserunning.js';
+
 export type WindDirection = 'in' | 'out' | 'crosswind' | 'none';
 
 export interface WeatherConditions {
@@ -27,12 +29,6 @@ export interface BallparkFactors {
   foulTerritory: 'small' | 'average' | 'large';
 }
 
-export interface BaseRunners {
-  first: boolean;
-  second: boolean;
-  third: boolean;
-}
-
 export interface GameSituation {
   inning: number;
   half: 'top' | 'bottom';
@@ -50,6 +46,8 @@ export interface GameSituation {
   batterCondition: number;
   weather: WeatherConditions;
   ballpark: BallparkFactors;
+  /** Fielding team's defensive ratings (catcher arm, infield/outfield range and arm). */
+  defense: DefensiveTeamRatings;
 }
 
 export const defaultWeather: WeatherConditions = {
