@@ -14,3 +14,6 @@ export * from './engine/matchupEngine.js';
 
 export * from './mapper/leagueBaselines.js';
 export * from './mapper/statsToAttributes.js';
+
+export * from './stats/types.js';
+export * from './stats/aggregator.js';

@@ -2,6 +2,7 @@ import { simulateAtBat } from './engine/matchupEngine.js';
 import { sampleBatter, samplePitcher, sampleSituation, sampleSituationWithRunners } from './data/samplePlayers.js';
 import type { PlateAppearanceResult } from './types/outcome.js';
 import { batterStatsToAttributes, pitcherStatsToAttributes } from './mapper/statsToAttributes.js';
+import { BatterStatsAggregator, PitcherStatsAggregator } from './stats/aggregator.js';
 
 const N = 20000;
 const tally = new Map<PlateAppearanceResult, number>();
@@ -83,4 +84,52 @@ const sluggerBatter = batterStatsToAttributes({
 console.log(
   `${sluggerBatter.name}: power=${sluggerBatter.power} contactVsR=${sluggerBatter.contactVsRight} contactVsL=${sluggerBatter.contactVsLeft} ` +
     `discipline=${sluggerBatter.plateDiscipline} speed=${sluggerBatter.speed} stealRating=${sluggerBatter.stealRating}`,
+);
+
+// Stats aggregation: simulate many plate appearances and produce full stat lines.
+console.log('\n--- 시즌 누적 스탯 집계 예시 (시뮬레이션 N 타석) ---');
+const batterStats = new BatterStatsAggregator(sampleBatter.id);
+const pitcherStats = new PitcherStatsAggregator();
+for (let i = 0; i < N; i++) {
+  const result = simulateAtBat(samplePitcher, sampleBatter, sampleSituation);
+  batterStats.addPlateAppearance(result);
+  pitcherStats.addPlateAppearance(result);
+}
+
+const bLine = batterStats.getStatLine();
+console.log(`${sampleBatter.name} (B) - ${bLine.plateAppearances} PA`);
+console.log(
+  `AVG/OBP/SLG/OPS: ${bLine.avg.toFixed(3)}/${bLine.obp.toFixed(3)}/${bLine.slg.toFixed(3)}/${bLine.ops.toFixed(3)} ` +
+    `ISO ${bLine.iso.toFixed(3)} BABIP ${bLine.babip.toFixed(3)}`,
+);
+console.log(
+  `1B ${bLine.singles} 2B ${bLine.doubles} 3B ${bLine.triples} HR ${bLine.homeRuns} ` +
+    `BB ${bLine.walks} HBP ${bLine.hitByPitch} K ${bLine.strikeouts} (swing ${bLine.strikeoutsSwinging}/look ${bLine.strikeoutsLooking})`,
+);
+console.log(
+  `K% ${(bLine.kRate * 100).toFixed(1)}% BB% ${(bLine.bbRate * 100).toFixed(1)}% ` +
+    `Swing% ${(bLine.swingRate * 100).toFixed(1)}% Contact% ${(bLine.contactRate * 100).toFixed(1)}% ` +
+    `Whiff% ${(bLine.whiffRate * 100).toFixed(1)}% Chase% ${(bLine.chaseRate * 100).toFixed(1)}%`,
+);
+console.log(
+  `GB% ${(bLine.groundBallRate * 100).toFixed(1)}% LD% ${(bLine.lineDriveRate * 100).toFixed(1)}% ` +
+    `FB% ${(bLine.flyBallRate * 100).toFixed(1)}% PU% ${(bLine.popUpRate * 100).toFixed(1)}% ` +
+    `Pull% ${(bLine.pullRate * 100).toFixed(1)}% Cen% ${(bLine.centerRate * 100).toFixed(1)}% Oppo% ${(bLine.oppoRate * 100).toFixed(1)}% ` +
+    `HardHit% ${(bLine.hardHitRate * 100).toFixed(1)}% Barrel% ${(bLine.barrelRate * 100).toFixed(1)}%`,
+);
+
+const pLine = pitcherStats.getStatLine();
+console.log(`\n${samplePitcher.name} (P) - ${pLine.battersFaced} BF, ${pLine.inningsPitched.toFixed(3)} IP`);
+console.log(
+  `ERA ${pLine.era.toFixed(2)} WHIP ${pLine.whip.toFixed(2)} K/9 ${pLine.kPer9.toFixed(2)} ` +
+    `BB/9 ${pLine.bbPer9.toFixed(2)} HR/9 ${pLine.hrPer9.toFixed(2)} K-BB% ${(pLine.kMinusBbRate * 100).toFixed(1)}%`,
+);
+console.log(
+  `Pitches ${pLine.pitchesThrown} Strike% ${(pLine.strikePercentage * 100).toFixed(1)}% ` +
+    `F-Strike% ${(pLine.firstPitchStrikePercentage * 100).toFixed(1)}% SwStr% ${(pLine.swingingStrikeRate * 100).toFixed(1)}% ` +
+    `CStr% ${(pLine.calledStrikeRate * 100).toFixed(1)}%`,
+);
+console.log(
+  `GB% ${(pLine.groundBallRate * 100).toFixed(1)}% LD% ${(pLine.lineDriveRate * 100).toFixed(1)}% ` +
+    `FB% ${(pLine.flyBallRate * 100).toFixed(1)}% PU% ${(pLine.popUpRate * 100).toFixed(1)}%`,
 );
