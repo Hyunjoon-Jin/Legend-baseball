@@ -13,6 +13,6 @@ npm run dev
 
 ## 배포 (GitHub Pages)
 
-`main` 브랜치에 푸시되면 `.github/workflows/deploy-pages.yml` 워크플로가 이 디렉터리를 빌드해 GitHub Pages에 배포합니다.
+기본 브랜치(`claude/pitcher-batter-matchup-algo-rbkmhm`)에 푸시되면 `.github/workflows/deploy-pages.yml` 워크플로가 이 디렉터리를 빌드해 GitHub Pages에 배포합니다.
 
 처음 한 번은 저장소 Settings → Pages → Build and deployment → Source를 "GitHub Actions"로 설정해야 합니다.
