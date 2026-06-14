@@ -1,7 +1,7 @@
 import { generateSampleLeague } from './data/sampleLeague.js';
 import { simulateKboSeason } from './season/leagueSim.js';
+import { computeBattingLeaders, computePitchingLeaders, BATTER_QUALIFY_PA, PITCHER_QUALIFY_IP, type LeaderEntry } from './season/leaderboards.js';
 import type { PostseasonRoundName } from './types/season.js';
-import type { BatterStatLine, PitcherStatLine } from './stats/types.js';
 
 function mulberry32(seed: number) {
   return function rng() {
@@ -20,30 +20,11 @@ const ROUND_LABEL_KO: Record<PostseasonRoundName, string> = {
   koreanSeries: '한국시리즈',
 };
 
-const BATTER_QUALIFY_PA = 300;
-const PITCHER_QUALIFY_IP = 100;
-const LEADER_COUNT = 5;
-
-/** Prints the top `count` qualifying players for one stat category, ranked ascending or descending. */
-function printLeaders<T>(
-  title: string,
-  stats: ReadonlyMap<string, T>,
-  playerNames: ReadonlyMap<string, string>,
-  qualify: (line: T) => boolean,
-  getValue: (line: T) => number,
-  format: (value: number) => string,
-  order: 'asc' | 'desc',
-  count: number,
-): void {
-  const ranked = [...stats.entries()]
-    .filter(([, line]) => qualify(line))
-    .sort((a, b) => (order === 'asc' ? getValue(a[1]) - getValue(b[1]) : getValue(b[1]) - getValue(a[1])))
-    .slice(0, count);
-
+/** Prints a pre-ranked leaderboard, one line per entry. */
+function printLeaderboard(title: string, entries: readonly LeaderEntry[], format: (value: number) => string): void {
   console.log(`\n${title}`);
-  ranked.forEach(([playerId, line], i) => {
-    const name = playerNames.get(playerId) ?? playerId;
-    console.log(`  ${String(i + 1).padStart(2)}위  ${name.padEnd(14)}  ${format(getValue(line))}`);
+  entries.forEach((entry, i) => {
+    console.log(`  ${String(i + 1).padStart(2)}위  ${entry.name.padEnd(14)}  ${format(entry.value)}`);
   });
 }
 
@@ -104,34 +85,15 @@ for (const series of result.postseason.series) {
 
 console.log(`\n*** 한국시리즈 우승: ${teamName.get(result.postseason.championId)!} ***`);
 
-console.log('\n\n=== 개인 타격 순위 (최소 300타석) ===');
-printLeaders<BatterStatLine>(
-  '-- 타율 (AVG) --', result.battingStats, result.playerNames,
-  (l) => l.plateAppearances >= BATTER_QUALIFY_PA, (l) => l.avg, (v) => v.toFixed(3), 'desc', LEADER_COUNT,
-);
-printLeaders<BatterStatLine>(
-  '-- 홈런 (HR) --', result.battingStats, result.playerNames,
-  (l) => l.plateAppearances >= BATTER_QUALIFY_PA, (l) => l.homeRuns, (v) => `${v}`, 'desc', LEADER_COUNT,
-);
-printLeaders<BatterStatLine>(
-  '-- 타점 (RBI) --', result.battingStats, result.playerNames,
-  (l) => l.plateAppearances >= BATTER_QUALIFY_PA, (l) => l.rbi, (v) => `${v}`, 'desc', LEADER_COUNT,
-);
-printLeaders<BatterStatLine>(
-  '-- OPS --', result.battingStats, result.playerNames,
-  (l) => l.plateAppearances >= BATTER_QUALIFY_PA, (l) => l.ops, (v) => v.toFixed(3), 'desc', LEADER_COUNT,
-);
+console.log(`\n\n=== 개인 타격 순위 (최소 ${BATTER_QUALIFY_PA}타석) ===`);
+const battingLeaders = computeBattingLeaders(result.battingStats, result.playerNames);
+printLeaderboard('-- 타율 (AVG) --', battingLeaders.avg, (v) => v.toFixed(3));
+printLeaderboard('-- 홈런 (HR) --', battingLeaders.homeRuns, (v) => `${v}`);
+printLeaderboard('-- 타점 (RBI) --', battingLeaders.rbi, (v) => `${v}`);
+printLeaderboard('-- OPS --', battingLeaders.ops, (v) => v.toFixed(3));
 
-console.log('\n=== 개인 투구 순위 (최소 100이닝) ===');
-printLeaders<PitcherStatLine>(
-  '-- 평균자책점 (ERA) --', result.pitchingStats, result.playerNames,
-  (l) => l.inningsPitched >= PITCHER_QUALIFY_IP, (l) => l.era, (v) => v.toFixed(2), 'asc', LEADER_COUNT,
-);
-printLeaders<PitcherStatLine>(
-  '-- 탈삼진 (K) --', result.pitchingStats, result.playerNames,
-  (l) => l.inningsPitched >= PITCHER_QUALIFY_IP, (l) => l.strikeouts, (v) => `${v}`, 'desc', LEADER_COUNT,
-);
-printLeaders<PitcherStatLine>(
-  '-- WHIP --', result.pitchingStats, result.playerNames,
-  (l) => l.inningsPitched >= PITCHER_QUALIFY_IP, (l) => l.whip, (v) => v.toFixed(2), 'asc', LEADER_COUNT,
-);
+console.log(`\n=== 개인 투구 순위 (최소 ${PITCHER_QUALIFY_IP}이닝) ===`);
+const pitchingLeaders = computePitchingLeaders(result.pitchingStats, result.playerNames);
+printLeaderboard('-- 평균자책점 (ERA) --', pitchingLeaders.era, (v) => v.toFixed(2));
+printLeaderboard('-- 탈삼진 (K) --', pitchingLeaders.strikeouts, (v) => `${v}`);
+printLeaderboard('-- WHIP --', pitchingLeaders.whip, (v) => v.toFixed(2));

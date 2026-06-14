@@ -120,7 +120,7 @@ const TEMPLATES: readonly TeamTemplate[] = [
 ];
 
 /** Ten fictional KBO-style club names, distinct from any real-life KBO team. */
-const TEAM_NAMES: readonly string[] = [
+export const TEAM_NAMES: readonly string[] = [
   '서울 드래곤즈',
   '부산 파이오니어스',
   '대구 라이온하츠',
@@ -134,7 +134,7 @@ const TEAM_NAMES: readonly string[] = [
 ];
 
 /** Per-team overall strength multiplier applied to every scalable rating, spreading the league from contenders to cellar-dwellers. */
-const TEAM_STRENGTH: readonly number[] = [1.06, 1.045, 1.03, 1.015, 1.0, 0.985, 0.97, 0.955, 0.94, 0.925];
+export const TEAM_STRENGTH: readonly number[] = [1.06, 1.045, 1.03, 1.015, 1.0, 0.985, 0.97, 0.955, 0.94, 0.925];
 
 /** Relative strength of each rotation slot (ace down to back-end starter), applied on top of team strength. */
 const ROTATION_STRENGTH: readonly number[] = [1.05, 1.02, 1.0, 0.97, 0.94];
@@ -151,11 +151,17 @@ function buildRotation(ace: PitcherAttributes, name: string, prefix: string, tea
  * rosters with a per-team strength multiplier (plus small jitter), so every
  * team has a distinct but internally consistent talent level for a
  * season-long simulation.
+ *
+ * `teamStrengths` overrides the default per-team strength multipliers
+ * (`TEAM_STRENGTH`) when it has exactly one entry per team; otherwise the
+ * defaults are used.
  */
-export function generateSampleLeague(rng: () => number): LeagueTeam[] {
+export function generateSampleLeague(rng: () => number, teamStrengths?: readonly number[]): LeagueTeam[] {
+  const strengths = teamStrengths?.length === TEAM_NAMES.length ? teamStrengths : TEAM_STRENGTH;
+
   return TEAM_NAMES.map((name, i) => {
     const template = TEMPLATES[i % TEMPLATES.length];
-    const strength = TEAM_STRENGTH[i];
+    const strength = strengths[i];
     const prefix = `T${i + 1}`;
 
     const lineup = template.lineup.map((b) => scaleBatter(b, `${prefix}-${b.id}`, `${name} ${b.name}`, strength, rng));

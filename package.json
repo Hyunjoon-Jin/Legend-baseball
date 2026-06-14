@@ -9,11 +9,16 @@
     "test": "node --import tsx --test src/**/*.test.ts",
     "demo": "tsx src/demo.ts",
     "season": "tsx src/seasonSim.ts",
-    "kbo-season": "tsx src/kboSeason.ts"
+    "kbo-season": "tsx src/kboSeason.ts",
+    "server": "tsx src/server/index.ts"
   },
   "devDependencies": {
-    "typescript": "^5.6.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
     "tsx": "^4.19.0",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
   }
 }
