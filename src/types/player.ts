@@ -28,6 +28,9 @@ export interface PitchRepertoireEntry {
   groundBallTendency: number;
 }
 
+/** A pitcher's role within the pitching staff, used for bullpen usage decisions. */
+export type PitcherRole = 'starter' | 'longRelief' | 'setup' | 'closer';
+
 export interface PitcherAttributes {
   id: string;
   name: string;
@@ -49,6 +52,8 @@ export interface PitcherAttributes {
   sequencingSkill: number;
   /** Pickoff move quality / quickness to the plate, 0-100. Suppresses opposing steal attempts and success. */
   holdRunnerRating: number;
+  /** Bullpen role, used when selecting a reliever for a given situation. Unset = general reliever. */
+  role?: PitcherRole;
 }
 
 export interface BatterAttributes {

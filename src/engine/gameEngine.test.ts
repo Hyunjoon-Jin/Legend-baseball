@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { simulateGame, type TeamSetup } from './gameEngine.js';
-import { samplePitcher, samplePitcherB, sampleLineupA, sampleLineupB } from '../data/samplePlayers.js';
+import {
+  samplePitcher,
+  samplePitcherB,
+  sampleLineupA,
+  sampleLineupB,
+  sampleBenchA,
+  sampleBenchB,
+  sampleBullpenA,
+  sampleBullpenB,
+} from '../data/samplePlayers.js';
 import { defaultDefense } from '../types/baserunning.js';
 
 function mulberry32(seed: number) {
@@ -16,6 +25,9 @@ function mulberry32(seed: number) {
 
 const away: TeamSetup = { name: '어웨이', lineup: sampleLineupA, pitcher: samplePitcherB, defense: defaultDefense };
 const home: TeamSetup = { name: '홈', lineup: sampleLineupB, pitcher: samplePitcher, defense: defaultDefense };
+
+const awayWithStaff: TeamSetup = { ...away, bench: sampleBenchA, bullpen: sampleBullpenB };
+const homeWithStaff: TeamSetup = { ...home, bench: sampleBenchB, bullpen: sampleBullpenA };
 
 test('a full game is at least 9 innings and never exceeds maxInnings', () => {
   const rng = mulberry32(10);
@@ -112,4 +124,63 @@ test('the batting order chains correctly across a team\'s consecutive half-innin
     const expectedStart = homeHalfInnings[i - 1].nextBatterIndex;
     assert.equal(homeHalfInnings[i].plateAppearances[0].lineupIndex, expectedStart);
   }
+});
+
+test('the game-level substitutions are the concatenation of each half-inning\'s substitutions, in order', () => {
+  const rng = mulberry32(30);
+  for (let i = 0; i < 10; i++) {
+    const result = simulateGame(awayWithStaff, homeWithStaff, {}, rng);
+    const expected = result.halfInnings.flatMap((h) => h.substitutions);
+    assert.deepEqual(result.substitutions, expected);
+  }
+});
+
+test('once a reliever enters the game for a team, he is removed from that team\'s bullpen for the rest of the game', () => {
+  const rng = mulberry32(31);
+  for (let i = 0; i < 10; i++) {
+    const result = simulateGame(awayWithStaff, homeWithStaff, {}, rng);
+
+    for (const halfLabel of ['top', 'bottom'] as const) {
+      const halves = result.halfInnings.filter((h) => h.half === halfLabel);
+      const usedPitcherIds = new Set<string>();
+      for (const half of halves) {
+        usedPitcherIds.add(half.pitcher.id);
+        for (const id of usedPitcherIds) {
+          assert.ok(!half.bullpen.some((p) => p.id === id), `pitcher ${id} should not still be in the bullpen`);
+        }
+      }
+    }
+  }
+});
+
+test('once a bench player enters the lineup as a pinch hitter/runner, he is removed from the bench for the rest of the game', () => {
+  const rng = mulberry32(32);
+  let foundAnySubstitution = false;
+
+  for (let i = 0; i < 20; i++) {
+    const result = simulateGame(awayWithStaff, homeWithStaff, {}, rng);
+
+    for (const halfLabel of ['top', 'bottom'] as const) {
+      const halves = result.halfInnings.filter((h) => h.half === halfLabel);
+      const everUsedBenchIds = new Set<string>();
+
+      for (const half of halves) {
+        for (const sub of half.substitutions) {
+          if (sub.type === 'pinchHitter' || sub.type === 'pinchRunner') {
+            everUsedBenchIds.add(sub.incoming.id);
+            foundAnySubstitution = true;
+            // The player who just entered must be on the field, not the bench.
+            assert.ok(half.lineup.some((b) => b.id === sub.incoming.id));
+          }
+        }
+        // No one who has ever come off the bench can return to the bench
+        // (even if a pinch hitter is later lifted for a pinch runner).
+        for (const id of everUsedBenchIds) {
+          assert.ok(!half.bench.some((b) => b.id === id), `bench player ${id} should not return to the bench`);
+        }
+      }
+    }
+  }
+
+  assert.ok(foundAnySubstitution, 'expected at least one pinch hitter/runner across 20 games');
 });

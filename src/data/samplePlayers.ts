@@ -14,6 +14,7 @@ export const samplePitcher: PitcherAttributes = {
   groundBallTendency: 55,
   sequencingSkill: 58,
   holdRunnerRating: 55,
+  role: 'starter',
   repertoire: [
     { type: 'fourSeam', velocity: 152, movement: 55, control: 65, usageRate: 0.4, groundBallTendency: 35 },
     { type: 'slider', velocity: 134, movement: 70, control: 60, usageRate: 0.25, groundBallTendency: 45 },
@@ -78,6 +79,7 @@ export const samplePitcherB: PitcherAttributes = {
   groundBallTendency: 50,
   sequencingSkill: 64,
   holdRunnerRating: 60,
+  role: 'starter',
   repertoire: [
     { type: 'twoSeam', velocity: 142, movement: 50, control: 70, usageRate: 0.35, groundBallTendency: 55 },
     { type: 'slider', velocity: 128, movement: 62, control: 65, usageRate: 0.2, groundBallTendency: 45 },
@@ -176,6 +178,96 @@ export const sampleLineupB: BatterAttributes[] = [
   {
     id: 'b09', name: '백승호', battingSide: 'R', contactVsRight: 50, contactVsLeft: 52, power: 36,
     plateDiscipline: 45, badBallHitting: 42, speed: 76, stealRating: 70, baserunningAggressiveness: 65,
+    swingType: 'level', pullTendency: 48, clutch: 46,
+  },
+];
+
+/** Relief corps backing up `samplePitcher` (home staff): long relief, setup man, and closer. */
+export const sampleBullpenA: PitcherAttributes[] = [
+  {
+    id: 'p011', name: '홍성호', throwingHand: 'R', control: 58, stuff: 60, stamina: 70,
+    mentalStrength: 55, recovery: 65, groundBallTendency: 50, sequencingSkill: 50, holdRunnerRating: 50,
+    role: 'longRelief',
+    repertoire: [
+      { type: 'fourSeam', velocity: 148, movement: 50, control: 60, usageRate: 0.55, groundBallTendency: 35 },
+      { type: 'slider', velocity: 132, movement: 60, control: 55, usageRate: 0.45, groundBallTendency: 45 },
+    ],
+  },
+  {
+    id: 'p012', name: '이재현', throwingHand: 'L', control: 60, stuff: 68, stamina: 40,
+    mentalStrength: 65, recovery: 55, groundBallTendency: 55, sequencingSkill: 55, holdRunnerRating: 55,
+    role: 'setup',
+    repertoire: [
+      { type: 'sinker', velocity: 145, movement: 58, control: 60, usageRate: 0.5, groundBallTendency: 68 },
+      { type: 'slider', velocity: 130, movement: 65, control: 58, usageRate: 0.5, groundBallTendency: 48 },
+    ],
+  },
+  {
+    id: 'p013', name: '차도진', throwingHand: 'R', control: 64, stuff: 78, stamina: 35,
+    mentalStrength: 78, recovery: 50, groundBallTendency: 45, sequencingSkill: 58, holdRunnerRating: 60,
+    role: 'closer',
+    repertoire: [
+      { type: 'fourSeam', velocity: 156, movement: 55, control: 64, usageRate: 0.6, groundBallTendency: 32 },
+      { type: 'splitter', velocity: 140, movement: 72, control: 58, usageRate: 0.4, groundBallTendency: 62 },
+    ],
+  },
+];
+
+/** Relief corps backing up `samplePitcherB` (away staff): long relief, setup man, and closer. */
+export const sampleBullpenB: PitcherAttributes[] = [
+  {
+    id: 'p021', name: '신동엽', throwingHand: 'R', control: 60, stuff: 58, stamina: 68,
+    mentalStrength: 52, recovery: 62, groundBallTendency: 52, sequencingSkill: 52, holdRunnerRating: 52,
+    role: 'longRelief',
+    repertoire: [
+      { type: 'twoSeam', velocity: 140, movement: 52, control: 62, usageRate: 0.5, groundBallTendency: 58 },
+      { type: 'curve', velocity: 118, movement: 64, control: 56, usageRate: 0.5, groundBallTendency: 50 },
+    ],
+  },
+  {
+    id: 'p022', name: '곽민기', throwingHand: 'L', control: 62, stuff: 66, stamina: 42,
+    mentalStrength: 62, recovery: 55, groundBallTendency: 50, sequencingSkill: 56, holdRunnerRating: 58,
+    role: 'setup',
+    repertoire: [
+      { type: 'fourSeam', velocity: 147, movement: 52, control: 62, usageRate: 0.55, groundBallTendency: 36 },
+      { type: 'changeup', velocity: 128, movement: 66, control: 58, usageRate: 0.45, groundBallTendency: 60 },
+    ],
+  },
+  {
+    id: 'p023', name: '백건우', throwingHand: 'L', control: 65, stuff: 76, stamina: 38,
+    mentalStrength: 76, recovery: 52, groundBallTendency: 48, sequencingSkill: 60, holdRunnerRating: 62,
+    role: 'closer',
+    repertoire: [
+      { type: 'fourSeam', velocity: 153, movement: 54, control: 65, usageRate: 0.6, groundBallTendency: 34 },
+      { type: 'slider', velocity: 134, movement: 68, control: 60, usageRate: 0.4, groundBallTendency: 46 },
+    ],
+  },
+];
+
+/** Bench for `sampleLineupA`: a contact bat with a platoon edge vs RHP, and a pinch-running speedster. */
+export const sampleBenchA: BatterAttributes[] = [
+  {
+    id: 'a10', name: '송지훈', battingSide: 'L', contactVsRight: 78, contactVsLeft: 55, power: 45,
+    plateDiscipline: 60, badBallHitting: 52, speed: 55, stealRating: 50, baserunningAggressiveness: 50,
+    swingType: 'level', pullTendency: 50, clutch: 58,
+  },
+  {
+    id: 'a11', name: '유광민', battingSide: 'S', contactVsRight: 50, contactVsLeft: 48, power: 30,
+    plateDiscipline: 45, badBallHitting: 40, speed: 90, stealRating: 85, baserunningAggressiveness: 80,
+    swingType: 'level', pullTendency: 48, clutch: 48,
+  },
+];
+
+/** Bench for `sampleLineupB`: a contact bat with a platoon edge vs LHP, and a pinch-running speedster. */
+export const sampleBenchB: BatterAttributes[] = [
+  {
+    id: 'b10', name: '권혁진', battingSide: 'R', contactVsRight: 55, contactVsLeft: 80, power: 48,
+    plateDiscipline: 58, badBallHitting: 50, speed: 50, stealRating: 45, baserunningAggressiveness: 48,
+    swingType: 'level', pullTendency: 52, clutch: 56,
+  },
+  {
+    id: 'b11', name: '장도윤', battingSide: 'L', contactVsRight: 48, contactVsLeft: 50, power: 32,
+    plateDiscipline: 44, badBallHitting: 40, speed: 88, stealRating: 82, baserunningAggressiveness: 78,
     swingType: 'level', pullTendency: 48, clutch: 46,
   },
 ];

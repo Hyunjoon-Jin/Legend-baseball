@@ -1,13 +1,17 @@
-import type { PitcherAttributes } from '../types/player.js';
+import type { BatterAttributes, PitcherAttributes } from '../types/player.js';
 import type { BallparkFactors, WeatherConditions } from '../types/situation.js';
 import type { DefensiveTeamRatings } from '../types/baserunning.js';
-import type { GameResult, HalfInningResult, Lineup } from '../types/game.js';
+import type { GameResult, HalfInningResult, Lineup, SubstitutionEvent } from '../types/game.js';
 import { simulateHalfInning } from './inningEngine.js';
 
 export interface TeamSetup {
   name: string;
   lineup: Lineup;
+  /** Available pinch hitters/runners. Defaults to none. */
+  bench?: readonly BatterAttributes[];
   pitcher: PitcherAttributes;
+  /** Available relief pitchers. Defaults to none. */
+  bullpen?: readonly PitcherAttributes[];
   defense: DefensiveTeamRatings;
   /** Pitcher's daily condition modifier, 0-100 (50 = normal). Defaults to 50. */
   pitcherCondition?: number;
@@ -28,9 +32,11 @@ export interface GameOptions {
  * Simulates a full game inning-by-inning: the away team bats in the top
  * half against the home pitcher/defense, then the home team bats in the
  * bottom half against the away pitcher/defense. Baserunners reset each
- * half-inning, but each team's batting order position and each pitcher's
- * cumulative pitch count (and therefore fatigue) carry forward across
- * innings.
+ * half-inning, but each team's batting order position, pitching staff
+ * (current pitcher + bullpen), bench, and each pitcher's cumulative pitch
+ * count (and therefore fatigue) carry forward across innings. Pitching
+ * changes, pinch hitters, and pinch runners made during a half-inning
+ * (see `simulateHalfInning`) persist for the rest of the game.
  *
  * From `regulationInnings` onward (default 9th inning):
  *  - if the home team is already leading after the top half, the bottom
@@ -51,6 +57,7 @@ export function simulateGame(
 
   const halfInnings: HalfInningResult[] = [];
   const lineScore = { away: [] as number[], home: [] as number[] };
+  const substitutions: SubstitutionEvent[] = [];
 
   let awayScore = 0;
   let homeScore = 0;
@@ -59,14 +66,25 @@ export function simulateGame(
   let awayPitchCount = 0;
   let homePitchCount = 0;
 
+  let awayLineup: Lineup = away.lineup;
+  let homeLineup: Lineup = home.lineup;
+  let awayBench: readonly BatterAttributes[] = away.bench ?? [];
+  let homeBench: readonly BatterAttributes[] = home.bench ?? [];
+  let awayPitcher = away.pitcher;
+  let homePitcher = home.pitcher;
+  let awayBullpen: readonly PitcherAttributes[] = away.bullpen ?? [];
+  let homeBullpen: readonly PitcherAttributes[] = home.bullpen ?? [];
+
   for (let inning = 1; inning <= maxInnings; inning++) {
     const top = simulateHalfInning(
       {
         inning,
         half: 'top',
-        lineup: away.lineup,
+        lineup: awayLineup,
+        bench: awayBench,
         startingBatterIndex: awayBatterIndex,
-        pitcher: home.pitcher,
+        pitcher: homePitcher,
+        bullpen: homeBullpen,
         pitcherPitchCountStart: homePitchCount,
         pitcherCondition: home.pitcherCondition,
         batterCondition: away.batterCondition,
@@ -78,8 +96,13 @@ export function simulateGame(
       rng,
     );
     halfInnings.push(top);
+    substitutions.push(...top.substitutions);
     awayScore += top.runsScored;
     awayBatterIndex = top.nextBatterIndex;
+    awayLineup = top.lineup;
+    awayBench = top.bench;
+    homePitcher = top.pitcher;
+    homeBullpen = top.bullpen;
     homePitchCount = top.pitcherPitchCount;
     lineScore.away.push(top.runsScored);
 
@@ -92,9 +115,11 @@ export function simulateGame(
       {
         inning,
         half: 'bottom',
-        lineup: home.lineup,
+        lineup: homeLineup,
+        bench: homeBench,
         startingBatterIndex: homeBatterIndex,
-        pitcher: away.pitcher,
+        pitcher: awayPitcher,
+        bullpen: awayBullpen,
         pitcherPitchCountStart: awayPitchCount,
         pitcherCondition: away.pitcherCondition,
         batterCondition: home.batterCondition,
@@ -107,8 +132,13 @@ export function simulateGame(
       rng,
     );
     halfInnings.push(bottom);
+    substitutions.push(...bottom.substitutions);
     homeScore += bottom.runsScored;
     homeBatterIndex = bottom.nextBatterIndex;
+    homeLineup = bottom.lineup;
+    homeBench = bottom.bench;
+    awayPitcher = bottom.pitcher;
+    awayBullpen = bottom.bullpen;
     awayPitchCount = bottom.pitcherPitchCount;
     lineScore.home.push(bottom.runsScored);
 
@@ -123,5 +153,6 @@ export function simulateGame(
     finalScore: { away: awayScore, home: homeScore },
     totalInnings: lineScore.away.length,
     winner,
+    substitutions,
   };
 }

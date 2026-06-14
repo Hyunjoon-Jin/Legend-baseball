@@ -12,6 +12,7 @@ export * from './engine/battedBall.js';
 export * from './engine/outcomeMapper.js';
 export * from './engine/baserunning.js';
 export * from './engine/matchupEngine.js';
+export * from './engine/managerStrategy.js';
 export * from './engine/inningEngine.js';
 export * from './engine/gameEngine.js';
 

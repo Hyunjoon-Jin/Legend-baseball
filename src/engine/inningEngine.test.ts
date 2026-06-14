@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { simulateHalfInning } from './inningEngine.js';
-import { samplePitcher, sampleLineupA } from '../data/samplePlayers.js';
+import { samplePitcher, sampleLineupA, sampleBenchA, sampleBullpenA } from '../data/samplePlayers.js';
 import { defaultDefense } from '../types/baserunning.js';
 
 function mulberry32(seed: number) {
@@ -146,4 +146,84 @@ test('starting mid-inning with existing outs/runners is respected', () => {
   const totalOuts = result.plateAppearances.reduce((sum, pa) => sum + pa.atBat.outsRecorded, 0);
   // Only 1 more out is needed to end the inning (started at 2).
   assert.equal(totalOuts, 1);
+});
+
+test('an exhausted starter is replaced by a reliever, and every plate appearance after the change faces the new pitcher', () => {
+  const rng = mulberry32(20);
+  const result = simulateHalfInning(
+    baseContext({
+      pitcherPitchCountStart: 120,
+      bullpen: sampleBullpenA,
+    }),
+    rng,
+  );
+
+  const changes = result.substitutions.filter((s) => s.type === 'pitchingChange');
+  assert.equal(changes.length, 1);
+  const change = changes[0];
+  assert.equal(change.outgoing.id, samplePitcher.id);
+  assert.equal(result.pitcher.id, change.incoming.id);
+  assert.ok(!result.bullpen.some((p) => p.id === change.incoming.id));
+
+  const changeIndex = result.plateAppearances.findIndex((pa) => pa.pitcher.id === change.incoming.id);
+  assert.equal(changeIndex, 0, 'the hard pitch-count cap should trigger the change before the first plate appearance');
+  for (const pa of result.plateAppearances) {
+    assert.equal(pa.pitcher.id, change.incoming.id);
+  }
+});
+
+test('a bench bat with a platoon edge can pinch-hit late in a close game, and the substitution is recorded', () => {
+  const rng = mulberry32(21);
+  let sawPinchHitter = false;
+
+  for (let i = 0; i < 100 && !sawPinchHitter; i++) {
+    const result = simulateHalfInning(
+      baseContext({
+        inning: 9,
+        startingScoreDiff: 1,
+        startingRunners: {
+          second: { runnerId: 'r2', speed: 50, stealRating: 50, baserunningAggressiveness: 50 },
+          third: { runnerId: 'r3', speed: 50, stealRating: 50, baserunningAggressiveness: 50 },
+        },
+        bench: sampleBenchA,
+      }),
+      rng,
+    );
+
+    const ph = result.substitutions.find((s) => s.type === 'pinchHitter');
+    if (ph) {
+      sawPinchHitter = true;
+      assert.equal(ph.incoming.id, sampleBenchA[0].id);
+      assert.ok(!result.bench.some((b) => b.id === ph.incoming.id));
+      assert.ok(result.lineup.some((b) => b.id === ph.incoming.id));
+    }
+  }
+
+  assert.ok(sawPinchHitter, 'expected at least one pinch hitter across 100 high-leverage half-innings');
+});
+
+test('a bench speedster can pinch-run late in a close game, and the substitution is recorded', () => {
+  const rng = mulberry32(22);
+  let sawPinchRunner = false;
+
+  for (let i = 0; i < 200 && !sawPinchRunner; i++) {
+    const result = simulateHalfInning(
+      baseContext({
+        inning: 9,
+        startingScoreDiff: 1,
+        bench: sampleBenchA,
+      }),
+      rng,
+    );
+
+    const pr = result.substitutions.find((s) => s.type === 'pinchRunner');
+    if (pr) {
+      sawPinchRunner = true;
+      assert.equal(pr.incoming.id, sampleBenchA[1].id);
+      assert.ok(!result.bench.some((b) => b.id === pr.incoming.id));
+      assert.ok(result.lineup.some((b) => b.id === pr.incoming.id));
+    }
+  }
+
+  assert.ok(sawPinchRunner, 'expected at least one pinch runner across 200 high-leverage half-innings');
 });

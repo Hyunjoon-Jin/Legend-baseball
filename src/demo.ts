@@ -1,6 +1,7 @@
 import { simulateAtBat } from './engine/matchupEngine.js';
 import { simulateHalfInning } from './engine/inningEngine.js';
 import { simulateGame } from './engine/gameEngine.js';
+import { fatigueFactor, selectPitchLocation } from './engine/pitchSelection.js';
 import {
   sampleBatter,
   samplePitcher,
@@ -9,10 +10,15 @@ import {
   sampleSituationWithRunners,
   sampleLineupA,
   sampleLineupB,
+  sampleBenchA,
+  sampleBenchB,
+  sampleBullpenA,
+  sampleBullpenB,
 } from './data/samplePlayers.js';
 import type { PlateAppearanceResult } from './types/outcome.js';
-import type { GameResult, HalfInningResult, InningPlateAppearance } from './types/game.js';
+import type { GameResult, HalfInningResult, InningPlateAppearance, SubstitutionEvent, SubstitutionType } from './types/game.js';
 import { defaultDefense } from './types/baserunning.js';
+import { defaultWeather, type WeatherConditions } from './types/situation.js';
 import { batterStatsToAttributes, pitcherStatsToAttributes } from './mapper/statsToAttributes.js';
 import { BatterStatsAggregator, PitcherStatsAggregator } from './stats/aggregator.js';
 
@@ -182,6 +188,26 @@ function formatPlateAppearance(pa: InningPlateAppearance): string {
   return `  ${pa.lineupIndex + 1}번 ${pa.batter.name.padEnd(4)} : ${label}${runsNote} (${pa.outsAfter}아웃, 누적 ${pa.runsAfter}점)`;
 }
 
+const SUBSTITUTION_LABEL_KO: Record<SubstitutionType, string> = {
+  pitchingChange: '투수교체',
+  pinchHitter: '대타',
+  pinchRunner: '대주자',
+};
+
+function printSubstitutions(substitutions: readonly SubstitutionEvent[]): void {
+  if (substitutions.length === 0) {
+    console.log('(이번 경기에는 선수 교체가 없었습니다)');
+    return;
+  }
+  for (const sub of substitutions) {
+    const halfLabel = sub.half === 'top' ? '초' : '말';
+    console.log(
+      `  ${sub.inning}회 ${halfLabel} [${SUBSTITUTION_LABEL_KO[sub.type]}] ` +
+        `${sub.outgoing.name} -> ${sub.incoming.name} (${sub.reason})`,
+    );
+  }
+}
+
 function printHalfInning(result: HalfInningResult, teamLabel: string, detailed: boolean): void {
   const header = `${result.inning}회 ${result.half === 'top' ? '초' : '말'} (${teamLabel})`;
   if (detailed) {
@@ -193,9 +219,31 @@ function printHalfInning(result: HalfInningResult, teamLabel: string, detailed: 
   const walkOffNote = result.endedByWalkOff ? ' / 끝내기!' : '';
   console.log(
     `${detailed ? '=>' : header + ':'} ${result.runsScored}득점 ${result.hits}안타 ${result.walks}볼넷 ` +
-      `${result.strikeouts}삼진 / 잔루 ${result.leftOnBase} / 투구수 ${result.pitchesThrown}${walkOffNote}`,
+      `${result.strikeouts}삼진 / 잔루 ${result.leftOnBase} / 투구수 ${result.pitchesThrown} ` +
+      `/ 상대투수 ${result.pitcher.name}(누적 ${result.pitcherPitchCount}구)${walkOffNote}`,
   );
 }
+
+// ---------------------------------------------------------------------------
+// Weather effects: heat accelerates pitcher fatigue, cold hurts control.
+// ---------------------------------------------------------------------------
+console.log('\n--- 날씨 영향 비교 (투구수 90개 기준) ---');
+const hotWeather: WeatherConditions = { ...defaultWeather, temperatureC: 35 };
+const coldWeather: WeatherConditions = { ...defaultWeather, temperatureC: 2 };
+const fatigueAt90 = (weather: WeatherConditions) =>
+  fatigueFactor({ ...sampleSituation, pitcherPitchCount: 90, weather }, samplePitcher);
+console.log(
+  `피로도 - 평년(${defaultWeather.temperatureC}C): ${fatigueAt90(defaultWeather).toFixed(3)} / ` +
+    `폭염(${hotWeather.temperatureC}C): ${fatigueAt90(hotWeather).toFixed(3)} / ` +
+    `한파(${coldWeather.temperatureC}C): ${fatigueAt90(coldWeather).toFixed(3)}`,
+);
+const controlAt = (weather: WeatherConditions) =>
+  selectPitchLocation(samplePitcher, samplePitcher.repertoire[0], { ...sampleSituation, pitcherPitchCount: 90, weather }, () => 0.5)
+    .effectiveControl;
+console.log(
+  `${samplePitcher.repertoire[0].type} 커맨드 - 평년: ${controlAt(defaultWeather).toFixed(1)} / ` +
+    `한파(${coldWeather.temperatureC}C): ${controlAt(coldWeather).toFixed(1)}`,
+);
 
 console.log('\n--- 이닝 단위 시뮬레이션: 1회 초 상세 ---');
 const firstInning = simulateHalfInning({
@@ -220,8 +268,8 @@ function printLineScore(game: GameResult): void {
 
 console.log('\n\n--- 9이닝 경기 시뮬레이션 (이닝별 요약 + 라인스코어) ---');
 const game = simulateGame(
-  { name: '어웨이', lineup: sampleLineupA, pitcher: samplePitcherB, defense: defaultDefense },
-  { name: '홈', lineup: sampleLineupB, pitcher: samplePitcher, defense: defaultDefense },
+  { name: '어웨이', lineup: sampleLineupA, bench: sampleBenchA, pitcher: samplePitcherB, bullpen: sampleBullpenB, defense: defaultDefense },
+  { name: '홈', lineup: sampleLineupB, bench: sampleBenchB, pitcher: samplePitcher, bullpen: sampleBullpenA, defense: defaultDefense },
 );
 
 for (const half of game.halfInnings) {
@@ -236,3 +284,6 @@ console.log(
   `\n최종 스코어: 어웨이 ${game.finalScore.away} : 홈 ${game.finalScore.home} (${winnerLabel}` +
     `${lastHalf.endedByWalkOff ? ', 끝내기' : ''}) - 총 ${game.totalInnings}이닝`,
 );
+
+console.log('\n--- 선수 교체 기록 ---');
+printSubstitutions(game.substitutions);
