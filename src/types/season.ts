@@ -1,9 +1,12 @@
 import type { TeamSetup } from '../engine/gameEngine.js';
+import type { PitcherAttributes } from './player.js';
 
 /** A team competing in the league, identified by a stable id for scheduling/standings. */
 export interface LeagueTeam {
   id: string;
   setup: TeamSetup;
+  /** Starting rotation (5 pitchers), used in turn for each of this team's games. */
+  rotation: readonly PitcherAttributes[];
 }
 
 /** A group of consecutive games between the same two teams at the same site. */

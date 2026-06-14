@@ -136,6 +136,16 @@ const TEAM_NAMES: readonly string[] = [
 /** Per-team overall strength multiplier applied to every scalable rating, spreading the league from contenders to cellar-dwellers. */
 const TEAM_STRENGTH: readonly number[] = [1.06, 1.045, 1.03, 1.015, 1.0, 0.985, 0.97, 0.955, 0.94, 0.925];
 
+/** Relative strength of each rotation slot (ace down to back-end starter), applied on top of team strength. */
+const ROTATION_STRENGTH: readonly number[] = [1.05, 1.02, 1.0, 0.97, 0.94];
+
+/** Builds a 5-man starting rotation by scaling a team's ace template at each rotation slot's relative strength. */
+function buildRotation(ace: PitcherAttributes, name: string, prefix: string, teamStrength: number, rng: () => number): PitcherAttributes[] {
+  return ROTATION_STRENGTH.map((rotationFactor, i) =>
+    scalePitcher(ace, `${prefix}-${ace.id}-rot${i + 1}`, `${name} ${ace.name}${i + 1}`, teamStrength * rotationFactor, rng),
+  );
+}
+
 /**
  * Generates a full 10-team league by scaling the two hand-authored sample
  * rosters with a per-team strength multiplier (plus small jitter), so every
@@ -150,18 +160,18 @@ export function generateSampleLeague(rng: () => number): LeagueTeam[] {
 
     const lineup = template.lineup.map((b) => scaleBatter(b, `${prefix}-${b.id}`, `${name} ${b.name}`, strength, rng));
     const bench = template.bench.map((b) => scaleBatter(b, `${prefix}-${b.id}`, `${name} ${b.name}`, strength, rng));
-    const pitcher = scalePitcher(template.pitcher, `${prefix}-${template.pitcher.id}`, `${name} ${template.pitcher.name}`, strength, rng);
+    const rotation = buildRotation(template.pitcher, name, prefix, strength, rng);
     const bullpen = template.bullpen.map((p) => scalePitcher(p, `${prefix}-${p.id}`, `${name} ${p.name}`, strength, rng));
 
     const setup: TeamSetup = {
       name,
       lineup,
       bench,
-      pitcher,
+      pitcher: rotation[0],
       bullpen,
       defense: scaleDefense(defaultDefense, strength, rng),
     };
 
-    return { id: prefix, setup };
+    return { id: prefix, setup, rotation };
   });
 }
