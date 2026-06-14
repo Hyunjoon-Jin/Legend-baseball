@@ -1,16 +1,18 @@
 # Legend Baseball 시뮬레이터 (Web UI)
 
-React + Vite 프론트엔드. `/api/*` 요청은 `../src/server`에서 실행되는 Express API 서버로 프록시됩니다.
+React + Vite 프론트엔드. 시뮬레이션 엔진(`../src`)을 브라우저에서 직접 실행하므로 별도의 백엔드 서버가 필요 없습니다.
 
 ## 실행 방법
 
-1. API 서버 (저장소 루트에서):
-   ```sh
-   npm run server
-   ```
-2. 프론트엔드 (이 디렉터리에서):
-   ```sh
-   npm install
-   npm run dev
-   ```
-3. 브라우저에서 `http://localhost:5173` 접속.
+```sh
+npm install
+npm run dev
+```
+
+브라우저에서 `http://localhost:5173/Legend-baseball/` 접속.
+
+## 배포 (GitHub Pages)
+
+`main` 브랜치에 푸시되면 `.github/workflows/deploy-pages.yml` 워크플로가 이 디렉터리를 빌드해 GitHub Pages에 배포합니다.
+
+처음 한 번은 저장소 Settings → Pages → Build and deployment → Source를 "GitHub Actions"로 설정해야 합니다.
