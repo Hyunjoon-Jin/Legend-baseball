@@ -16,11 +16,12 @@ import {
   decideStolenBaseAttempt,
   resolveStolenBaseAttempt,
 } from './baserunning.js';
+import { calculateLeverage } from './managerStrategy.js';
 import { clamp } from '../utils/math.js';
 
 const MAX_PITCHES_PER_AT_BAT = 30; // safety guard against pathological loops
 
-function batterToRunner(batter: BatterAttributes): RunnerOnBase {
+export function batterToRunner(batter: BatterAttributes): RunnerOnBase {
   return {
     runnerId: batter.id,
     speed: batter.speed,
@@ -79,6 +80,13 @@ export function simulateAtBat(
   let runners: BaseRunners = { ...situation.runners };
   let outsOnBases = 0;
 
+  // High-leverage moments (late, close, runners in scoring position) amplify
+  // each player's composure: clutch batters and mentally tough pitchers play
+  // closer to their best, while shakier ones fade further from it.
+  const leverage = calculateLeverage(situation);
+  const effectiveBatterCondition = clamp(situation.batterCondition + ((batter.clutch - 50) / 50) * leverage * 8, 0, 100);
+  const effectivePitcherCondition = clamp(situation.pitcherCondition + ((pitcher.mentalStrength - 50) / 50) * leverage * 8, 0, 100);
+
   const outsAvailable = () => 3 - situation.outs - outsOnBases;
 
   for (let i = 0; i < MAX_PITCHES_PER_AT_BAT; i++) {
@@ -93,7 +101,7 @@ export function simulateAtBat(
         baseRunningEvents.push(...applied.events);
         outsOnBases++;
         if (outsAvailable() <= 0) {
-          return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, 3);
+          return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, outsOnBases);
         }
       }
     }
@@ -109,7 +117,7 @@ export function simulateAtBat(
         if (outcome === 'caughtStealing') {
           outsOnBases++;
           if (outsAvailable() <= 0) {
-            return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, 3);
+            return buildResult(pitches, 'inningEndingCaughtStealing', 0, 0, runners, baseRunningEvents, outsOnBases);
           }
         }
       }
@@ -120,6 +128,8 @@ export function simulateAtBat(
       balls: balls as GameSituation['balls'],
       strikes: strikes as GameSituation['strikes'],
       pitcherPitchCount: pitchCount,
+      pitcherCondition: effectivePitcherCondition,
+      batterCondition: effectiveBatterCondition,
       runners,
     };
 

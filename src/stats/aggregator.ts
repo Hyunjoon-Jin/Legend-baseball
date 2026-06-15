@@ -83,7 +83,11 @@ export class BatterStatsAggregator {
   private hardHitBalls = 0;
   private barrels = 0;
 
-  constructor(private readonly playerId: string) {}
+  private readonly playerId: string;
+
+  constructor(playerId: string) {
+    this.playerId = playerId;
+  }
 
   /** Records one plate appearance for this batter. */
   addPlateAppearance(atBat: AtBatResult): void {

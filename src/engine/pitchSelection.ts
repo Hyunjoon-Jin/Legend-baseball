@@ -20,12 +20,13 @@ function countKey(situation: GameSituation): string {
 
 /**
  * Fatigue ramps up once the pitcher passes ~75 pitches, scaling to full
- * effect by ~125 pitches.
+ * effect by ~125 pitches. Hot weather accelerates fatigue accumulation.
  */
-function fatigueFactor(situation: GameSituation, pitcher: PitcherAttributes): number {
+export function fatigueFactor(situation: GameSituation, pitcher: PitcherAttributes): number {
   const raw = (situation.pitcherPitchCount - 75) / 50;
   const staminaRelief = pitcher.stamina / 200; // up to 0.5 extra pitches "tolerance" in the ramp
-  return clamp(raw - staminaRelief, 0, 1);
+  const heatPenalty = Math.max(0, situation.weather.temperatureC - 28) * 0.01;
+  return clamp(raw - staminaRelief + heatPenalty, 0, 1);
 }
 
 /**
@@ -81,10 +82,13 @@ export function selectPitchLocation(
   const fatigue = fatigueFactor(situation, pitcher);
   const conditionAdjust = ((situation.pitcherCondition - 50) / 50) * 10;
 
+  // Cold weather stiffens the grip, costing a bit of fine command.
+  const coldPenalty = Math.max(0, 10 - situation.weather.temperatureC) * 0.3;
+
   // Effective command blends the pitch-specific command with the
-  // pitcher's overall control, then applies fatigue/condition.
+  // pitcher's overall control, then applies fatigue/condition/weather.
   const baseControl = entry.control * 0.6 + pitcher.control * 0.4;
-  const effectiveControl = clamp(baseControl + conditionAdjust - fatigue * 15, 5, 100);
+  const effectiveControl = clamp(baseControl + conditionAdjust - fatigue * 15 - coldPenalty, 5, 100);
 
   // Effective velocity degrades slightly with fatigue and bad condition.
   const velocity = entry.velocity + conditionAdjust * 0.1 - fatigue * 3;

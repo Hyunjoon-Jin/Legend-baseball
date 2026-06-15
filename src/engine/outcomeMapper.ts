@@ -137,7 +137,7 @@ function resolveFlyBall(
   return { result: 'flyOut', basesReached: 0 };
 }
 
-function resolvePopUp(profile: BattedBallProfile, situation: GameSituation, rng: () => number): BattedBallOutcome {
+function resolvePopUp(_profile: BattedBallProfile, situation: GameSituation, rng: () => number): BattedBallOutcome {
   // Larger foul territory gives infielders/catchers more room to make
   // the play, marginally raising the pop-out rate.
   const foulTerritoryBonus = situation.ballpark.foulTerritory === 'large' ? 0.01 : 0;
