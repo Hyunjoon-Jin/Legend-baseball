@@ -119,18 +119,18 @@ const TEMPLATES: readonly TeamTemplate[] = [
   { lineup: sampleLineupB, bench: sampleBenchB, pitcher: samplePitcherB, bullpen: sampleBullpenB },
 ];
 
-/** Ten fictional KBO-style club names, distinct from any real-life KBO team. */
+/** The ten real KBO League club names. */
 export const TEAM_NAMES: readonly string[] = [
-  '서울 드래곤즈',
-  '부산 파이오니어스',
-  '대구 라이온하츠',
-  '인천 코메츠',
-  '광주 선더스',
-  '대전 그리폰스',
-  '수원 로얄스',
-  '창원 스파르탄스',
-  '제주 볼케이노스',
-  '울산 타이탄스',
+  '두산 베어스',
+  'LG 트윈스',
+  'KIA 타이거즈',
+  '삼성 라이온즈',
+  'SSG 랜더스',
+  '롯데 자이언츠',
+  '한화 이글스',
+  'NC 다이노스',
+  'KT 위즈',
+  '키움 히어로즈',
 ];
 
 /** Per-team overall strength multiplier applied to every scalable rating, spreading the league from contenders to cellar-dwellers. */

@@ -36,6 +36,23 @@ interface TeamSeasonState {
   team: LeagueTeam;
   fatigue: FatigueState;
   rotationSlot: number;
+  /** Number of this team's games completed so far this season (0-indexed going into the next game). */
+  gamesPlayed: number;
+}
+
+/**
+ * Optional season-level hooks for roster operations (call-ups, injuries,
+ * trades, ...) that need to swap in an updated `LeagueTeam` mid-season.
+ */
+export interface SeasonHooks {
+  /**
+   * Called for each team before it plays its `gamesPlayed`-th game (0-indexed),
+   * with the team's accumulated per-pitcher fatigue. Returning a `LeagueTeam`
+   * replaces that team for this and all later games (e.g. applying the
+   * September roster expansion once `gamesPlayed === EXPANSION_GAME_INDEX`,
+   * or swapping in call-ups after an injury roll).
+   */
+  onBeforeGame?: (gamesPlayed: number, teamId: string, team: LeagueTeam, fatigue: ReadonlyMap<string, number>) => LeagueTeam | void;
 }
 
 /** A team's full pitching staff (rotation + bullpen), for fatigue tracking. */
@@ -155,13 +172,13 @@ function playSeasonGame(
  * the postseason. Every plate appearance is folded into per-player batting
  * and pitching stat lines.
  */
-export function simulateKboSeason(teams: readonly LeagueTeam[], options: GameOptions, rng: () => number): KboSeasonResult {
+export function simulateKboSeason(teams: readonly LeagueTeam[], options: GameOptions, rng: () => number, hooks: SeasonHooks = {}): KboSeasonResult {
   const teamIds = teams.map((t) => t.id);
   const scheduledGames = expandToGames(generateRegularSeasonSeries(teamIds));
 
   const states = new Map<string, TeamSeasonState>();
   for (const team of teams) {
-    states.set(team.id, { team, fatigue: new Map(), rotationSlot: 0 });
+    states.set(team.id, { team, fatigue: new Map(), rotationSlot: 0, gamesPlayed: 0 });
   }
 
   const battingStats = new Map<string, BatterStatsAggregator>();
@@ -172,10 +189,18 @@ export function simulateKboSeason(teams: readonly LeagueTeam[], options: GameOpt
   const games: PlayedGame[] = scheduledGames.map((scheduled, index) => {
     const homeState = states.get(scheduled.homeTeamId)!;
     const awayState = states.get(scheduled.awayTeamId)!;
+
+    const updatedHome = hooks.onBeforeGame?.(homeState.gamesPlayed, scheduled.homeTeamId, homeState.team, homeState.fatigue);
+    if (updatedHome) homeState.team = updatedHome;
+    const updatedAway = hooks.onBeforeGame?.(awayState.gamesPlayed, scheduled.awayTeamId, awayState.team, awayState.fatigue);
+    if (updatedAway) awayState.team = updatedAway;
+
     const weather = seasonWeather(index / lastGameIndex, rng);
     const gameOptions: GameOptions = { ...options, weather };
 
     const outcome = playSeasonGame(homeState, awayState, gameOptions, battingStats, pitchingStats, playerNames, rng);
+    homeState.gamesPlayed++;
+    awayState.gamesPlayed++;
     return { homeTeamId: scheduled.homeTeamId, awayTeamId: scheduled.awayTeamId, ...outcome };
   });
 
