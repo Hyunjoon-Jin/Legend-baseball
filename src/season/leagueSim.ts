@@ -46,11 +46,13 @@ interface TeamSeasonState {
  */
 export interface SeasonHooks {
   /**
-   * Called for each team before it plays its `gamesPlayed`-th game (0-indexed).
-   * Returning a `LeagueTeam` replaces that team for this and all later games
-   * (e.g. applying the September roster expansion once `gamesPlayed === EXPANSION_GAME_INDEX`).
+   * Called for each team before it plays its `gamesPlayed`-th game (0-indexed),
+   * with the team's accumulated per-pitcher fatigue. Returning a `LeagueTeam`
+   * replaces that team for this and all later games (e.g. applying the
+   * September roster expansion once `gamesPlayed === EXPANSION_GAME_INDEX`,
+   * or swapping in call-ups after an injury roll).
    */
-  onBeforeGame?: (gamesPlayed: number, teamId: string, team: LeagueTeam) => LeagueTeam | void;
+  onBeforeGame?: (gamesPlayed: number, teamId: string, team: LeagueTeam, fatigue: ReadonlyMap<string, number>) => LeagueTeam | void;
 }
 
 /** A team's full pitching staff (rotation + bullpen), for fatigue tracking. */
@@ -188,9 +190,9 @@ export function simulateKboSeason(teams: readonly LeagueTeam[], options: GameOpt
     const homeState = states.get(scheduled.homeTeamId)!;
     const awayState = states.get(scheduled.awayTeamId)!;
 
-    const updatedHome = hooks.onBeforeGame?.(homeState.gamesPlayed, scheduled.homeTeamId, homeState.team);
+    const updatedHome = hooks.onBeforeGame?.(homeState.gamesPlayed, scheduled.homeTeamId, homeState.team, homeState.fatigue);
     if (updatedHome) homeState.team = updatedHome;
-    const updatedAway = hooks.onBeforeGame?.(awayState.gamesPlayed, scheduled.awayTeamId, awayState.team);
+    const updatedAway = hooks.onBeforeGame?.(awayState.gamesPlayed, scheduled.awayTeamId, awayState.team, awayState.fatigue);
     if (updatedAway) awayState.team = updatedAway;
 
     const weather = seasonWeather(index / lastGameIndex, rng);

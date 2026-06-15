@@ -47,3 +47,9 @@ export const PEAK_AGE_BATTER = 27;
 
 /** Age at which pitcher ratings peak before decline begins. */
 export const PEAK_AGE_PITCHER = 28;
+
+/** Base per-game probability that an active (1군) player suffers a new injury. */
+export const INJURY_BASE_PROBABILITY = 0.0015;
+
+/** Age above which injury risk increases for each additional year. */
+export const INJURY_AGE_RISK_THRESHOLD = 33;
