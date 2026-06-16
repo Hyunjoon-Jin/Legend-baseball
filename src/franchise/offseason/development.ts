@@ -78,21 +78,30 @@ function developPitcherAttributes(attrs: PitcherAttributes, potential: number, a
   return updated;
 }
 
-/** Probability of retiring for a player already at/above `RETIREMENT_SOFT_AGE`. */
+/**
+ * Retirement probability driven by performance, not age:
+ * - Good players (OVR ≥ 50) face little or no retirement pressure at any age.
+ * - Below OVR 50 the probability rises sharply — no team wants a 35-OVR player.
+ * - Age adds a small additional weight, but only for already-declining players
+ *   (OVR < 60). Stars see zero age penalty, so they keep playing as long as
+ *   the aging curve keeps their OVR above the threshold.
+ */
 function retirementProbability(profile: PlayerProfile): number {
-  let p = (profile.age - RETIREMENT_SOFT_AGE) * 0.08;
-  if (overallRating(profile) < 40) p += 0.15;
-  if (profile.rosterStatus === '2군') p += 0.1;
-  return p;
+  const overall = overallRating(profile);
+  const age = profile.age;
+
+  const perfFactor = Math.max(0, (50 - overall) * 0.025);
+  const ageFactor = Math.max(0, age - 37) * Math.max(0, (60 - overall) / 600);
+
+  return Math.min(perfFactor + ageFactor, 0.90);
 }
 
 /**
- * Ages one player by a year: increments `age` and `serviceTimeYears`, grows
- * or declines their scalable attributes toward/away from `potential` (which
- * itself never changes), and rolls for retirement — forced at
- * `RETIREMENT_HARD_AGE`, probabilistic from `RETIREMENT_SOFT_AGE` based on
- * age, current rating, and roster status. Retiring players get
- * `rosterStatus: '은퇴'`.
+ * Ages one player by a year: increments `age` and `serviceTimeYears`, then
+ * grows or declines scalable attributes. Retirement is driven by performance:
+ * a player whose OVR drops below ~50 due to the aging curve will face
+ * increasing retirement probability, while a still-elite player at 40 will
+ * almost never retire. Hard cap at age 50 (physical impossibility).
  */
 export function ageOnePlayer(profile: PlayerProfile, rng: () => number): PlayerProfile {
   const age = profile.age + 1;
@@ -102,7 +111,7 @@ export function ageOnePlayer(profile: PlayerProfile, rng: () => number): PlayerP
 
   const aged: PlayerProfile = { ...profile, age, serviceTimeYears: profile.serviceTimeYears + 1, attributes };
 
-  const retires = age >= RETIREMENT_HARD_AGE || (age >= RETIREMENT_SOFT_AGE && rng() < retirementProbability(aged));
+  const retires = age >= 50 || rng() < retirementProbability(aged);
   return retires ? { ...aged, rosterStatus: '은퇴' as const } : aged;
 }
 

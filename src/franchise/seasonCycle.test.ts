@@ -75,7 +75,9 @@ test('playFranchiseSeason advances the year, ages every surviving player, and ar
   for (const p of result.retiredPlayers) {
     assert.equal(p.rosterStatus, '은퇴');
     assert.equal(p.age, agesById.get(p.playerId)! + 1);
-    assert.ok(p.age >= RETIREMENT_SOFT_AGE);
+    // Retirement is now performance-driven; a player can retire at any age if
+    // their OVR drops below the threshold. Hard cap is 50.
+    assert.ok(p.age >= 1);
   }
 
   const retirementRecords = result.transactionLog.filter((r) => r.type === 'retirement');

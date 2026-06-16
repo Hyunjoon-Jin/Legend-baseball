@@ -21,11 +21,46 @@ import type { PlayerProfile } from '../types/roster.js';
 /** Game index at which AI teams make their one mid-season trade attempt (well before the deadline). */
 const TRADE_MARKET_GAME = 30;
 
+/** Maximum AI-initiated trades per season. */
+const MAX_TRADES = 2;
+
+type PositionGroup = 'pitcher' | 'C' | 'IF' | 'OF' | 'DH';
+
+function positionGroup(p: PlayerProfile): PositionGroup {
+  if (p.kind === 'pitcher') return 'pitcher';
+  const pos = p.position;
+  if (pos === 'C') return 'C';
+  if (pos === 'DH') return 'DH';
+  if (pos === 'LF' || pos === 'CF' || pos === 'RF') return 'OF';
+  return 'IF';
+}
+
+/** Average OVR of active (1군) players in a position group. Returns 99 if none present. */
+function groupOvr(roster: PlayerProfile[], group: PositionGroup): number {
+  const active = roster.filter((p) => p.rosterStatus === '1군' && positionGroup(p) === group);
+  if (active.length === 0) return 99;
+  return active.reduce((s, p) => s + overallRating(p), 0) / active.length;
+}
+
+/** The position group where a team's active roster is weakest. */
+function weakestGroup(roster: PlayerProfile[]): PositionGroup {
+  const groups: PositionGroup[] = ['pitcher', 'C', 'IF', 'OF', 'DH'];
+  return groups.reduce((w, g) => (groupOvr(roster, g) < groupOvr(roster, w) ? g : w));
+}
+
+/** Best 2군 player available in a given group, or null if none. */
+function bestDepthPlayer(roster: PlayerProfile[], group: PositionGroup): PlayerProfile | null {
+  const candidates = roster.filter((p) => p.rosterStatus === '2군' && positionGroup(p) === group);
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => overallRating(b) - overallRating(a))[0];
+}
+
 /**
- * Pairs teams randomly and proposes a "best bench-for-bench" swap for each
- * pair — executing the trade (via `buildPostTradeRosters`) when both sides'
- * top 2군 players are within 10 value points of each other. Mutates `rosters`
- * in-place and appends records to `transactionLog`.
+ * Need-based AI trade market: each team identifies the position group where
+ * their active roster is weakest, then looks for a trade partner whose depth
+ * chart can address that need — and vice versa. A trade executes only when
+ * both sides receive a player who upgrades their weakest group. At most
+ * `MAX_TRADES` deals per season.
  */
 function runAiTradeMarket(
   teamIds: readonly string[],
@@ -36,40 +71,46 @@ function runAiTradeMarket(
 ): void {
   const shuffled = [...teamIds].sort(() => rng() - 0.5);
   const traded = new Set<string>();
-  const TOLERANCE = 10;
-  const MAX_TRADES = 2;
 
-  for (let i = 0; i + 1 < shuffled.length; i += 2) {
+  for (const idA of shuffled) {
     if (traded.size / 2 >= MAX_TRADES) break;
-    const idA = shuffled[i];
-    const idB = shuffled[i + 1];
-    if (traded.has(idA) || traded.has(idB)) continue;
+    if (traded.has(idA)) continue;
 
     const rA = rosters.get(idA)!;
-    const rB = rosters.get(idB)!;
+    const needA = weakestGroup(rA);
+    const currentA = groupOvr(rA, needA);
 
-    const bestA = [...rA.filter((p) => p.rosterStatus === '2군')].sort((a, b) => playerValue(b) - playerValue(a))[0];
-    const bestB = [...rB.filter((p) => p.rosterStatus === '2군')].sort((a, b) => playerValue(b) - playerValue(a))[0];
-    if (!bestA || !bestB) continue;
+    for (const idB of shuffled) {
+      if (idB === idA || traded.has(idB)) continue;
 
-    if (Math.abs(playerValue(bestA) - playerValue(bestB)) > TOLERANCE) continue;
+      const rB = rosters.get(idB)!;
+      const offer = bestDepthPlayer(rB, needA);
+      if (!offer || overallRating(offer) <= currentA) continue;
 
-    const [newA, newB] = buildPostTradeRosters(
-      { teamAId: idA, teamBId: idB, playersFromA: [bestA.playerId], playersFromB: [bestB.playerId] },
-      rA,
-      rB,
-    );
-    rosters.set(idA, newA);
-    rosters.set(idB, newB);
-    traded.add(idA);
-    traded.add(idB);
+      const needB = weakestGroup(rB);
+      const currentB = groupOvr(rB, needB);
+      const counter = bestDepthPlayer(rA, needB);
+      if (!counter || overallRating(counter) <= currentB) continue;
 
-    transactionLog.push({
-      year,
-      type: 'trade',
-      playerIds: [bestA.playerId, bestB.playerId],
-      description: `트레이드: ${idA} ↔ ${idB}`,
-    });
+      // Both sides genuinely improve — execute the trade.
+      const [newA, newB] = buildPostTradeRosters(
+        { teamAId: idA, teamBId: idB, playersFromA: [counter.playerId], playersFromB: [offer.playerId] },
+        rA,
+        rB,
+      );
+      rosters.set(idA, newA);
+      rosters.set(idB, newB);
+      traded.add(idA);
+      traded.add(idB);
+
+      transactionLog.push({
+        year,
+        type: 'trade',
+        playerIds: [counter.playerId, offer.playerId],
+        description: `트레이드: ${counter.attributes.name} (${idA}→${idB}) ↔ ${offer.attributes.name} (${idB}→${idA})`,
+      });
+      break;
+    }
   }
 }
 
