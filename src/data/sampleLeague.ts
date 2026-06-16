@@ -3,6 +3,7 @@ import type { DefensiveTeamRatings } from '../types/baserunning.js';
 import { defaultDefense } from '../types/baserunning.js';
 import type { TeamSetup } from '../engine/gameEngine.js';
 import type { LeagueTeam } from '../types/season.js';
+import { generateKoreanName } from './nameGenerator.js';
 import {
   samplePitcher,
   samplePitcherB,
@@ -142,7 +143,7 @@ const ROTATION_STRENGTH: readonly number[] = [1.05, 1.02, 1.0, 0.97, 0.94];
 /** Builds a 5-man starting rotation by scaling a team's ace template at each rotation slot's relative strength. */
 function buildRotation(ace: PitcherAttributes, name: string, prefix: string, teamStrength: number, rng: () => number): PitcherAttributes[] {
   return ROTATION_STRENGTH.map((rotationFactor, i) =>
-    scalePitcher(ace, `${prefix}-${ace.id}-rot${i + 1}`, `${name} ${ace.name}${i + 1}`, teamStrength * rotationFactor, rng),
+    scalePitcher(ace, `${prefix}-${ace.id}-rot${i + 1}`, `${name} ${generateKoreanName(rng)}`, teamStrength * rotationFactor, rng),
   );
 }
 

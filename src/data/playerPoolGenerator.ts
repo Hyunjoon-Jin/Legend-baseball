@@ -417,8 +417,8 @@ export function generateTeamPlayerPool(teamIndex: number, strength: number, rng:
     }
   }
 
-  ROTATION_STRENGTH.forEach((factor, i) => {
-    const attrs = scalePitcherAttributes(template.ace, nextId(), `${template.ace.name}${i + 1}`, strength * factor, rng, 'starter');
+  ROTATION_STRENGTH.forEach((factor) => {
+    const attrs = scalePitcherAttributes(template.ace, nextId(), generateKoreanName(rng), strength * factor, rng, 'starter');
     pitchers.push(makePitcherProfile(attrs, 'core', rng));
   });
 
