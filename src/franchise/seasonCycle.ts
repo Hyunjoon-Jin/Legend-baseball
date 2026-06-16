@@ -10,7 +10,9 @@ import { decrementContracts, processFADeclarations, runDomesticFAMarket } from '
 import { runForeignSigningMarket } from './offseason/foreignSigning.js';
 import { runAsiaQuotaSigningMarket } from './offseason/asiaQuotaSigning.js';
 import { generateForeignFreeAgentPool, generateAsiaQuotaFreeAgentPool } from '../data/playerPoolGenerator.js';
-import { ACTIVE_ROSTER_SIZE, EXPANDED_ROSTER_SIZE, EXPANSION_GAME_INDEX } from '../roster/constants.js';
+import { generateDraftClass, runDraft } from './offseason/draft.js';
+import { runSecondaryDraft } from './offseason/secondaryDraft.js';
+import { ACTIVE_ROSTER_SIZE, EXPANDED_ROSTER_SIZE, EXPANSION_GAME_INDEX, SECONDARY_DRAFT_CYCLE_YEARS } from '../roster/constants.js';
 import { playerValue } from './trade/evaluation.js';
 import { buildPostTradeRosters } from './trade/execution.js';
 import type { FranchiseState, TeamFranchiseState, TransactionRecord } from './types.js';
@@ -188,7 +190,22 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
   });
 
   // --- offseason markets ---
-  const afterDecrement = teams.map((t) => ({ ...t, roster: decrementContracts(t.roster) }));
+  let afterDecrement = teams.map((t) => ({ ...t, roster: decrementContracts(t.roster) }));
+
+  // Secondary draft: runs every SECONDARY_DRAFT_CYCLE_YEARS seasons.
+  if (state.year % SECONDARY_DRAFT_CYCLE_YEARS === 0) {
+    const { teams: afterSD, picks: sdPicks } = runSecondaryDraft(afterDecrement, result, rng);
+    afterDecrement = afterSD;
+    for (const pick of sdPicks) {
+      transactionLog.push({
+        year: state.year,
+        type: 'secondaryDraft',
+        teamId: pick.teamId,
+        playerIds: [pick.playerId],
+        description: `2차 드래프트 ${pick.round}라운드: ${pick.playerName} (${pick.fromTeamId} → ${pick.teamId})`,
+      });
+    }
+  }
 
   const foreignPool = generateForeignFreeAgentPool(state.year + 1, 20, rng);
   const asiaPool = generateAsiaQuotaFreeAgentPool(state.year + 1, 10, rng);
@@ -200,10 +217,23 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
   const { teams: afterSigning, signed, unsigned } = runDomesticFAMarket(afterFADecl, allFAs, rng);
 
   // FA departures may have left 1군 vacancies; promote best 2군 players to fill them.
-  const finalTeams = afterSigning.map((t) => ({
+  const afterReplenish = afterSigning.map((t) => ({
     ...t,
     roster: replenishActiveRoster(t.roster, ACTIVE_ROSTER_SIZE),
   }));
+
+  // Rookie draft: fills each team's 2군 with new prospects.
+  const draftClass = generateDraftClass(state.year + 1, 100, rng);
+  const { teams: finalTeams, picks: draftPicks } = runDraft(afterReplenish, draftClass, result, rng);
+  for (const pick of draftPicks) {
+    transactionLog.push({
+      year: state.year,
+      type: 'draft',
+      teamId: pick.teamId,
+      playerIds: [pick.playerId],
+      description: `드래프트 ${pick.round}라운드: ${pick.playerName} → ${pick.teamId}`,
+    });
+  }
 
   for (const fa of newFreeAgents) {
     transactionLog.push({
@@ -232,6 +262,7 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
     domesticFreeAgents: unsigned,
     foreignFreeAgents: [],
     asiaQuotaFreeAgents: [],
+    draftPoolNextYear: [],
     lastSeasonResult: result,
   };
 }
