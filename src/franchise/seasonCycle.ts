@@ -214,7 +214,7 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
   const { teams: afterForeign } = runForeignSigningMarket(afterDecrement, foreignPool, rng);
   const { teams: afterAsiaQuota } = runAsiaQuotaSigningMarket(afterForeign, asiaPool, rng);
 
-  const { teams: afterFADecl, newFreeAgents } = processFADeclarations(afterAsiaQuota, rng);
+  const { teams: afterFADecl, newFreeAgents } = processFADeclarations(afterAsiaQuota);
   const allFAs = [...state.domesticFreeAgents, ...newFreeAgents];
   const { teams: afterSigning, signed, unsigned } = runDomesticFAMarket(afterFADecl, allFAs, rng);
 

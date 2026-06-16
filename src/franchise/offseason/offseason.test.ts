@@ -105,28 +105,20 @@ test('decrementContracts clamps yearsRemaining at 0', () => {
 
 // --- processFADeclarations ---
 
-test('processFADeclarations removes eligible player who declares', () => {
+test('processFADeclarations removes eligible player automatically', () => {
   const fa = makeDomesticBatter('FA1', 70, 0, FA_ELIGIBILITY_YEARS);
   const teams = makeTeams([{ id: 'T1', roster: [fa] }]);
-  const { teams: result, newFreeAgents } = processFADeclarations(teams, () => 0);
+  const { teams: result, newFreeAgents } = processFADeclarations(teams);
   assert.equal(result[0].roster.length, 0);
   assert.equal(newFreeAgents.length, 1);
   assert.equal(newFreeAgents[0].playerId, 'FA1');
   assert.equal(newFreeAgents[0].contract.faEligible, true);
 });
 
-test('processFADeclarations keeps eligible player who does not declare (rng too high)', () => {
-  const fa = makeDomesticBatter('FA1', 70, 0, FA_ELIGIBILITY_YEARS);
-  const teams = makeTeams([{ id: 'T1', roster: [fa] }]);
-  const { teams: result, newFreeAgents } = processFADeclarations(teams, () => 0.9);
-  assert.equal(result[0].roster.length, 1);
-  assert.equal(newFreeAgents.length, 0);
-});
-
 test('processFADeclarations keeps player with years remaining on contract', () => {
   const locked = makeDomesticBatter('B1', 70, 1, FA_ELIGIBILITY_YEARS);
   const teams = makeTeams([{ id: 'T1', roster: [locked] }]);
-  const { teams: result, newFreeAgents } = processFADeclarations(teams, () => 0);
+  const { teams: result, newFreeAgents } = processFADeclarations(teams);
   assert.equal(result[0].roster.length, 1);
   assert.equal(newFreeAgents.length, 0);
 });
@@ -134,7 +126,7 @@ test('processFADeclarations keeps player with years remaining on contract', () =
 test('processFADeclarations keeps player with insufficient service time', () => {
   const notEligible = makeDomesticBatter('B1', 70, 0, FA_ELIGIBILITY_YEARS - 1);
   const teams = makeTeams([{ id: 'T1', roster: [notEligible] }]);
-  const { teams: result, newFreeAgents } = processFADeclarations(teams, () => 0);
+  const { teams: result, newFreeAgents } = processFADeclarations(teams);
   assert.equal(result[0].roster.length, 1);
   assert.equal(newFreeAgents.length, 0);
 });
@@ -143,7 +135,7 @@ test('processFADeclarations ignores non-domestic players regardless of service t
   const foreigner = makeForeignPitcher('F1', 0);
   const asiaPlayer = makeAsiaQuotaBatter('AQ1', 0);
   const teams = makeTeams([{ id: 'T1', roster: [foreigner, asiaPlayer] }]);
-  const { teams: result, newFreeAgents } = processFADeclarations(teams, () => 0);
+  const { teams: result, newFreeAgents } = processFADeclarations(teams);
   assert.equal(result[0].roster.length, 2);
   assert.equal(newFreeAgents.length, 0);
 });

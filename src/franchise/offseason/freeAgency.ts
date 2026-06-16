@@ -4,9 +4,6 @@ import { overallRating } from '../../roster/rating.js';
 import { playerValue } from '../trade/evaluation.js';
 import { FA_ELIGIBILITY_YEARS, TOTAL_SQUAD_SIZE } from '../../roster/constants.js';
 
-/** Fraction of eligible players who actually declare FA each offseason. */
-const FA_DECLARE_PROBABILITY = 0.15;
-
 /** Maximum FA signings a single team may make per offseason (KBO teams rarely sign more than 3). */
 const MAX_FA_SIGNINGS_PER_TEAM = 3;
 
@@ -19,14 +16,13 @@ export function decrementContracts(roster: readonly PlayerProfile[]): PlayerProf
 }
 
 /**
- * For every domestic player whose contract just expired and who has earned
- * FA eligibility, rolls a declaration probability. Declaring players are
- * removed from their team's roster and returned as `newFreeAgents` with
- * `faEligible: true`. Non-domestic and under-contract players are untouched.
+ * Every domestic player whose contract has expired and who has 8+ years of
+ * service time declares FA automatically (KBO rule: eligibility is earned,
+ * not rolled). They are removed from their team's roster and returned as
+ * `newFreeAgents` with `faEligible: true`.
  */
 export function processFADeclarations(
   teams: readonly TeamFranchiseState[],
-  rng: () => number,
 ): { teams: TeamFranchiseState[]; newFreeAgents: PlayerProfile[] } {
   const newFreeAgents: PlayerProfile[] = [];
 
@@ -38,7 +34,7 @@ export function processFADeclarations(
         p.contract.yearsRemaining <= 0 &&
         p.serviceTimeYears >= FA_ELIGIBILITY_YEARS;
 
-      if (eligible && rng() < FA_DECLARE_PROBABILITY) {
+      if (eligible) {
         newFreeAgents.push({ ...p, contract: { ...p.contract, faEligible: true } });
       } else {
         remaining.push(p);
@@ -51,13 +47,25 @@ export function processFADeclarations(
 }
 
 /**
+ * Returns the FA contract length appropriate for a player's overall rating.
+ * Stars earn longer guaranteed years; below-average players sign short deals.
+ */
+function faContractYears(overall: number, rng: () => number): number {
+  if (overall >= 75) return 3 + Math.floor(rng() * 3); // 3-5 years (star)
+  if (overall >= 65) return 2 + Math.floor(rng() * 3); // 2-4 years (solid)
+  if (overall >= 55) return 1 + Math.floor(rng() * 3); // 1-3 years (average)
+  return 1 + Math.floor(rng() * 2);                    // 1-2 years (fringe)
+}
+
+/**
  * Distributes free agents across teams using a need-based greedy auction:
  * - FAs are processed in descending `playerValue` order.
  * - Each FA signs with the team that has the fewest players at the FA's
  *   position (batters) or the fewest total pitchers (pitchers), provided
- *   the team has room under `TOTAL_SQUAD_SIZE`.
+ *   the team has room under `TOTAL_SQUAD_SIZE` and hasn't hit the per-team cap.
  * - If no team can accept the player, they remain unsigned.
- * - Signed players receive a new 2-4-year contract and are set to `'2군'`.
+ * - Contract length scales with player quality (stars get 3-5 years,
+ *   fringe players get 1-2 years). Salary scales with overall rating.
  */
 export function runDomesticFAMarket(
   teams: readonly TeamFranchiseState[],
@@ -93,9 +101,10 @@ export function runDomesticFAMarket(
       continue;
     }
 
+    const overall = overallRating(fa);
     const newContract = {
-      yearsRemaining: 2 + Math.floor(rng() * 3),
-      annualSalary: Math.round(overallRating(fa) * 1000),
+      yearsRemaining: faContractYears(overall, rng),
+      annualSalary: Math.round(overall * overall * 40),
       faEligible: false,
     };
     const signedPlayer: PlayerProfile = { ...fa, rosterStatus: '2군' as const, contract: newContract };
