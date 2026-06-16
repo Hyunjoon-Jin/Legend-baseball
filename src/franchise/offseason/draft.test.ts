@@ -123,18 +123,17 @@ test('runDraft players land with rosterStatus 2군 and origin draft', () => {
   }
 });
 
-test('runDraft skips teams that are at TOTAL_SQUAD_SIZE', () => {
+test('runDraft is not gated by TOTAL_SQUAD_SIZE — full teams still draft every round', () => {
   const full = Array.from({ length: TOTAL_SQUAD_SIZE }, (_, i) => makePlayer(`B${i}`, 60));
   const draftClass = generateDraftClass(2025, 5, mulberry32(14));
   const teams = makeTeams([
     { id: 'T-FULL', roster: full },
     { id: 'T-EMPTY', roster: [] },
   ]);
-  const { teams: result } = runDraft(teams, draftClass, undefined, mulberry32(15));
+  const { teams: result, picks } = runDraft(teams, draftClass, undefined, mulberry32(15));
   const tFull = result.find((t) => t.teamId === 'T-FULL')!;
-  assert.equal(tFull.roster.length, TOTAL_SQUAD_SIZE, 'full team should not exceed cap');
-  const tEmpty = result.find((t) => t.teamId === 'T-EMPTY')!;
-  assert.ok(tEmpty.roster.length > 0, 'empty team should have received picks');
+  assert.ok(tFull.roster.length > TOTAL_SQUAD_SIZE, 'a full team can exceed the cap via the draft');
+  assert.ok(picks.some((p) => p.teamId === 'T-FULL'), 'full team should still receive picks');
 });
 
 test('runDraft runs the correct number of rounds', () => {

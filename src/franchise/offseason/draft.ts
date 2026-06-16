@@ -4,7 +4,7 @@ import type { KboSeasonResult } from '../../season/leagueSim.js';
 import { sampleBatter, samplePitcher } from '../../data/samplePlayers.js';
 import { generateKoreanName } from '../../data/nameGenerator.js';
 import { clamp } from '../../utils/math.js';
-import { DRAFT_ROUNDS, TOTAL_SQUAD_SIZE } from '../../roster/constants.js';
+import { DRAFT_ROUNDS } from '../../roster/constants.js';
 
 const POSITIONS: readonly Position[] = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
 const DRAFT_BATTER_FRACTION = 0.55;
@@ -162,7 +162,10 @@ function pickBestProspect(available: readonly PlayerProfile[], roster: readonly 
 /**
  * Runs the rookie draft: `DRAFT_ROUNDS` rounds in reverse-standings order.
  * Each team selects the highest-potential prospect addressing their shallowest
- * depth, provided they are under `TOTAL_SQUAD_SIZE`. Drafted players are set
+ * depth. Unlike the other offseason markets, the draft is not gated by
+ * `TOTAL_SQUAD_SIZE` — every team gets a pick every round (as long as
+ * prospects remain), the same as a real-world entry draft, even if that
+ * temporarily pushes a team's squad over the cap. Drafted players are set
  * to `origin: 'draft'` and `rosterStatus: '2군'`.
  */
 export function runDraft(
@@ -180,7 +183,6 @@ export function runDraft(
     for (const teamId of order) {
       if (available.length === 0) break;
       const roster = rosters.get(teamId)!;
-      if (roster.length >= TOTAL_SQUAD_SIZE) continue;
 
       const pick = pickBestProspect(available, roster);
       if (!pick) break;

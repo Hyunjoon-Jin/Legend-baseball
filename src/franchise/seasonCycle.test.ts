@@ -4,7 +4,7 @@ import { playFranchiseSeason } from './seasonCycle.js';
 import type { FranchiseState, TeamFranchiseState } from './types.js';
 import { generateLeaguePlayerPools } from '../data/playerPoolGenerator.js';
 import { buildDepthChart } from '../roster/depthChart.js';
-import { ACTIVE_ROSTER_SIZE, RETIREMENT_SOFT_AGE, TOTAL_SQUAD_SIZE } from '../roster/constants.js';
+import { ACTIVE_ROSTER_SIZE, RETIREMENT_SOFT_AGE } from '../roster/constants.js';
 
 function mulberry32(seed: number) {
   return function rng() {
@@ -56,7 +56,6 @@ test('playFranchiseSeason advances the year, ages every surviving player, and ar
 
   for (const team of result.teams) {
     assert.ok(team.roster.filter((p) => p.rosterStatus === '1군').length <= ACTIVE_ROSTER_SIZE);
-    assert.ok(team.roster.length <= TOTAL_SQUAD_SIZE);
 
     for (const p of team.roster) {
       // New foreign/asiaQuota pool players won't be in agesById; skip age check for them.
@@ -87,13 +86,6 @@ test('playFranchiseSeason advances the year, ages every surviving player, and ar
   for (const r of tradeRecords) {
     assert.equal(r.year, state.year);
     assert.ok(r.playerIds.length >= 2);
-  }
-
-  // After Phase 6 offseason markets, foreign/asiaQuota pool players may join
-  // and some may leave, so the exact total is no longer fixed at 650.
-  // Verify instead that no team exceeds the squad cap.
-  for (const team of result.teams) {
-    assert.ok(team.roster.length <= TOTAL_SQUAD_SIZE);
   }
 });
 
