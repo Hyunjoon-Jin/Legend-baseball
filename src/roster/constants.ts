@@ -25,7 +25,7 @@ export const FOREIGN_SLOTS = 3;
 export const ASIA_QUOTA_SLOTS = 1;
 
 /** Number of rounds in the annual rookie draft. */
-export const DRAFT_ROUNDS = 10;
+export const DRAFT_ROUNDS = 3;
 
 /** How often (in years) the secondary draft occurs. */
 export const SECONDARY_DRAFT_CYCLE_YEARS = 3;

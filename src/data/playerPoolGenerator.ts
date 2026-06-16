@@ -196,8 +196,14 @@ function serviceTimeFromAge(age: number): number {
 }
 
 function buildContract(serviceTimeYears: number, overall: number, rng: () => number) {
+  // FA-eligible veterans would already be on a multi-year FA deal; give them
+  // longer contracts so the league doesn't flood with FA declarations year 1.
+  const yearsRemaining =
+    serviceTimeYears >= FA_ELIGIBILITY_YEARS
+      ? 2 + Math.floor(rng() * 4) // 2-5 years remaining on FA contract
+      : 1 + Math.floor(rng() * 4); // 1-4 years (team-controlled)
   return {
-    yearsRemaining: 1 + Math.floor(rng() * 4),
+    yearsRemaining,
     annualSalary: Math.round(clamp((overall - 30) * 1200 + jitter(rng, 2000), 3000, 250000)),
     faEligible: serviceTimeYears >= FA_ELIGIBILITY_YEARS,
   };
@@ -387,13 +393,13 @@ export function generateTeamPlayerPool(teamIndex: number, strength: number, rng:
 
   template.lineup.forEach((b, i) => {
     const pos = template.lineupPositions[i];
-    const attrs = scaleBatterAttributes(b, nextId(), b.name, strength, rng);
+    const attrs = scaleBatterAttributes(b, nextId(), generateKoreanName(rng), strength, rng);
     batters.push(makeBatterProfile(attrs, pos, 'core', rng));
   });
 
   template.bench.forEach((b, i) => {
     const pos = template.benchPositions[i];
-    const attrs = scaleBatterAttributes(b, nextId(), b.name, strength, rng);
+    const attrs = scaleBatterAttributes(b, nextId(), generateKoreanName(rng), strength, rng);
     batters.push(makeBatterProfile(attrs, pos, 'depth1', rng));
     nextSlot[pos] = 2;
   });
@@ -423,7 +429,7 @@ export function generateTeamPlayerPool(teamIndex: number, strength: number, rng:
   });
 
   template.bullpen.forEach((p) => {
-    const attrs = scalePitcherAttributes(p, nextId(), p.name, strength, rng, p.role);
+    const attrs = scalePitcherAttributes(p, nextId(), generateKoreanName(rng), strength, rng, p.role);
     pitchers.push(makePitcherProfile(attrs, 'core', rng));
   });
 

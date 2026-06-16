@@ -5,7 +5,7 @@ import { playerValue } from '../trade/evaluation.js';
 import { FA_ELIGIBILITY_YEARS, TOTAL_SQUAD_SIZE } from '../../roster/constants.js';
 
 /** Fraction of eligible players who actually declare FA each offseason. */
-const FA_DECLARE_PROBABILITY = 0.35;
+const FA_DECLARE_PROBABILITY = 0.15;
 
 /** Maximum FA signings a single team may make per offseason (KBO teams rarely sign more than 3). */
 const MAX_FA_SIGNINGS_PER_TEAM = 3;

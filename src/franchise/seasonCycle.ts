@@ -37,8 +37,10 @@ function runAiTradeMarket(
   const shuffled = [...teamIds].sort(() => rng() - 0.5);
   const traded = new Set<string>();
   const TOLERANCE = 10;
+  const MAX_TRADES = 2;
 
   for (let i = 0; i + 1 < shuffled.length; i += 2) {
+    if (traded.size / 2 >= MAX_TRADES) break;
     const idA = shuffled[i];
     const idB = shuffled[i + 1];
     if (traded.has(idA) || traded.has(idB)) continue;
