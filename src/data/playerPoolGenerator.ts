@@ -461,3 +461,38 @@ export function generateTeamPlayerPool(teamIndex: number, strength: number, rng:
 export function generateLeaguePlayerPools(strengths: readonly number[], rng: () => number): PlayerProfile[][] {
   return strengths.map((strength, teamIndex) => generateTeamPlayerPool(teamIndex, strength, rng));
 }
+
+const FOREIGN_BATTER_POSITIONS: readonly Position[] = ['LF', 'RF', 'CF', 'DH', '1B'];
+const ASIA_QUOTA_BATTER_POSITIONS: readonly Position[] = ['SS', 'CF', '2B', '3B', '1B'];
+
+/**
+ * Generates a pool of foreign free-agent candidates for the offseason market.
+ * Roughly 2/3 are pitchers and 1/3 are batters, with higher strength variance
+ * than domestic players (0.8–1.3) to simulate "boom-or-bust" foreign signings.
+ * Player IDs follow `FGN-{year}-{seq}` to ensure cross-season uniqueness.
+ */
+export function generateForeignFreeAgentPool(year: number, count: number, rng: () => number): PlayerProfile[] {
+  return Array.from({ length: count }, (_, i) => {
+    const id = `FGN-${year}-${String(i + 1).padStart(3, '0')}`;
+    const strength = 0.8 + rng() * 0.5;
+    if (rng() < 2 / 3) {
+      return makeImportPitcher(id, strength, rng);
+    }
+    const position = FOREIGN_BATTER_POSITIONS[Math.floor(rng() * FOREIGN_BATTER_POSITIONS.length)];
+    return makeImportBatter(id, position, 'foreign', strength, rng);
+  });
+}
+
+/**
+ * Generates a pool of Asia-quota free-agent candidates (all batters) for the
+ * offseason market. Strength variance is moderate (0.85–1.2). Player IDs
+ * follow `AQT-{year}-{seq}`.
+ */
+export function generateAsiaQuotaFreeAgentPool(year: number, count: number, rng: () => number): PlayerProfile[] {
+  return Array.from({ length: count }, (_, i) => {
+    const id = `AQT-${year}-${String(i + 1).padStart(3, '0')}`;
+    const strength = 0.85 + rng() * 0.35;
+    const position = ASIA_QUOTA_BATTER_POSITIONS[Math.floor(rng() * ASIA_QUOTA_BATTER_POSITIONS.length)];
+    return makeImportBatter(id, position, 'asiaQuota', strength, rng);
+  });
+}
