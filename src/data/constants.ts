@@ -75,16 +75,16 @@ export const COUNT_STRIKE_PRESSURE: Record<string, number> = {
 export const COUNT_CHASE_BONUS: Record<string, number> = {
   '0-0': 0,
   '0-1': 0.03,
-  '0-2': 0.12,
+  '0-2': 0.08,
   '1-0': 0,
   '1-1': 0.03,
-  '1-2': 0.12,
+  '1-2': 0.08,
   '2-0': 0,
   '2-1': 0.03,
-  '2-2': 0.12,
+  '2-2': 0.08,
   '3-0': -0.05,
   '3-1': 0,
-  '3-2': 0.08,
+  '3-2': 0.05,
 };
 
 /** Average travel distance (meters) for a "barreled" ball at sea level, no wind. */

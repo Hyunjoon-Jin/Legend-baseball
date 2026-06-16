@@ -41,7 +41,7 @@ function generateLaunchAngle(batter: BatterAttributes, pitch: SelectedPitch, rng
   // Sinkers/splitters etc. push launch angle down even on good contact.
   const groundBallPull = ((PITCH_TYPE_GROUNDBALL_PULL[pitch.pitchType] - 50) / 50) * 8;
 
-  const noise = sampleNormal(0, 12, rng);
+  const noise = sampleNormal(0, 16, rng);
   return clamp(swingBase + locationAdjust - groundBallPull + noise, -45, 75);
 }
 

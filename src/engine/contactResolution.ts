@@ -39,9 +39,9 @@ export function contactProbability(
 
   const diff = contactRating - effectiveStuff - velocityPenalty - zonePenalty;
 
-  // Offset of +25 calibrates the curve so an average matchup on a
-  // middle-middle pitch yields a realistic ~78% contact rate.
-  return clamp(sigmoid(diff + 25, 20), 0.05, 0.98);
+  // Offset of +50 calibrates the curve so an average matchup on a
+  // middle-middle pitch yields ~90% contact rate (KBO target K% ~19-20%).
+  return clamp(sigmoid(diff + 50, 20), 0.05, 0.98);
 }
 
 /**
@@ -59,7 +59,7 @@ export function foulProbability(
   const diff = contactRating - effectiveStuff;
   const zoneDist = distanceFromCenter(pitch.zone);
 
-  return clamp(0.5 - diff / 200 + zoneDist * 0.08, 0.15, 0.75);
+  return clamp(0.5 - diff / 200 + zoneDist * 0.06, 0.15, 0.70);
 }
 
 /**

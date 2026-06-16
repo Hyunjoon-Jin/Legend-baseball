@@ -1,6 +1,6 @@
 import type { BatterAttributes } from '../types/player.js';
 import type { GameSituation } from '../types/situation.js';
-import { distanceFromCenter, isInStrikeZone } from '../types/zone.js';
+import { isInStrikeZone } from '../types/zone.js';
 import type { SelectedPitch } from './pitchSelection.js';
 import { centered, clamp, sigmoid } from '../utils/math.js';
 import { COUNT_CHASE_BONUS, PITCH_TYPE_DECEPTION } from '../data/constants.js';
@@ -25,18 +25,19 @@ export function swingProbability(
   let prob: number;
 
   if (inZone) {
-    const base = 0.68;
+    const base = 0.72;
     // A disciplined hitter recognizes a strike and swings at it slightly more often.
     prob = base + (disciplineScore - 0.5) * 0.25;
 
     // Two-strike protection: batters expand their effective zone.
-    if (situation.strikes === 2) prob += 0.08;
+    if (situation.strikes === 2) prob += 0.12;
 
     // 3-0 "automatic take" tendency.
     if (situation.balls === 3 && situation.strikes === 0) prob -= 0.35;
   } else {
-    const isWaste = distanceFromCenter(pitch.zone) >= 2;
-    const base = isWaste ? 0.08 : 0.32;
+    // All out-of-zone cells have Chebyshev distance ≥ 2 from centre —
+    // there is no "shadow zone" between in-zone and waste in this grid.
+    const base = 0.07;
 
     // Disciplined hitters chase out-of-zone pitches far less often.
     prob = base * (1 - disciplineScore * 0.7);

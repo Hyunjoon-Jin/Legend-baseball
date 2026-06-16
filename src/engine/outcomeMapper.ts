@@ -33,8 +33,8 @@ function resolveGroundBall(
   rng: () => number,
 ): BattedBallOutcome {
   const speedBonus = ((batter.speed - 50) / 50) * 0.08;
-  const hardHitBonus = ((profile.exitVelocity - 95) / 100) * 0.1;
-  const hitProb = clamp(0.18 + speedBonus + hardHitBonus, 0.05, 0.45);
+  const hardHitBonus = ((profile.exitVelocity - 95) / 100) * 0.10;
+  const hitProb = clamp(0.16 + speedBonus + hardHitBonus, 0.05, 0.42);
 
   if (rng() < hitProb) {
     const infield = profile.exitVelocity < 100 && batter.speed > 70 && rng() < 0.5;
@@ -78,7 +78,7 @@ function resolveLineDrive(
   situation: GameSituation,
   rng: () => number,
 ): BattedBallOutcome {
-  const hitProb = clamp(0.55 + ((profile.exitVelocity - 100) / 100) * 0.3, 0.3, 0.9);
+  const hitProb = clamp(0.54 + ((profile.exitVelocity - 100) / 100) * 0.28, 0.28, 0.84);
 
   if (rng() < hitProb) {
     const fenceDistance = fenceDistanceFor(profile.direction, situation.ballpark);
@@ -124,13 +124,13 @@ function resolveFlyBall(
     return { result: 'insideTheParkHomeRun', basesReached: 4 };
   }
 
-  if (ratio >= 0.85) {
+  if (ratio >= 0.90) {
     const triple = isGap && batter.speed > 70 && rng() < 0.3;
     return { result: triple ? 'triple' : 'double', basesReached: triple ? 3 : 2 };
   }
 
   // Sacrifice fly: deep enough fly ball with a runner on third and < 2 outs.
-  if (situation.runners.third && situation.outs < 2 && ratio >= 0.55) {
+  if (situation.runners.third && situation.outs < 2 && ratio >= 0.60) {
     return { result: 'sacrificeFly', basesReached: 0 };
   }
 

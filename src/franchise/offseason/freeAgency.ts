@@ -5,7 +5,10 @@ import { playerValue } from '../trade/evaluation.js';
 import { FA_ELIGIBILITY_YEARS, TOTAL_SQUAD_SIZE } from '../../roster/constants.js';
 
 /** Fraction of eligible players who actually declare FA each offseason. */
-const FA_DECLARE_PROBABILITY = 0.7;
+const FA_DECLARE_PROBABILITY = 0.35;
+
+/** Maximum FA signings a single team may make per offseason (KBO teams rarely sign more than 3). */
+const MAX_FA_SIGNINGS_PER_TEAM = 3;
 
 /** Decrements each player's contract by one year (minimum 0). */
 export function decrementContracts(roster: readonly PlayerProfile[]): PlayerProfile[] {
@@ -62,6 +65,7 @@ export function runDomesticFAMarket(
   rng: () => number,
 ): { teams: TeamFranchiseState[]; signed: PlayerProfile[]; unsigned: PlayerProfile[] } {
   const rosters = new Map<string, PlayerProfile[]>(teams.map((t) => [t.teamId, [...t.roster]]));
+  const signingsPerTeam = new Map<string, number>(teams.map((t) => [t.teamId, 0]));
   const signed: PlayerProfile[] = [];
   const unsigned: PlayerProfile[] = [];
 
@@ -73,6 +77,7 @@ export function runDomesticFAMarket(
 
     for (const [teamId, roster] of rosters) {
       if (roster.length >= TOTAL_SQUAD_SIZE) continue;
+      if ((signingsPerTeam.get(teamId) ?? 0) >= MAX_FA_SIGNINGS_PER_TEAM) continue;
       const count =
         fa.kind === 'batter'
           ? roster.filter((p) => p.kind === 'batter' && p.position === fa.position).length
@@ -95,6 +100,7 @@ export function runDomesticFAMarket(
     };
     const signedPlayer: PlayerProfile = { ...fa, rosterStatus: '2군' as const, contract: newContract };
     rosters.get(bestTeam)!.push(signedPlayer);
+    signingsPerTeam.set(bestTeam, (signingsPerTeam.get(bestTeam) ?? 0) + 1);
     signed.push(signedPlayer);
   }
 
