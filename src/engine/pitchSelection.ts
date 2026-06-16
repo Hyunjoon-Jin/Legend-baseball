@@ -94,8 +94,8 @@ export function selectPitchLocation(
   const velocity = entry.velocity + conditionAdjust * 0.1 - fatigue * 3;
 
   // How far from the center of the zone the pitcher is *aiming*.
-  // 0 = dead center, ~2.2 = the outer edge of the shadow zone (a "waste" pitch).
-  const aimOffset = clamp((0.7 - strikePressure) / 1.2, 0, 1) * 2.2;
+  // 0 = dead center, up to 1.85 = beyond the zone edge on chase counts.
+  const aimOffset = clamp((0.7 - strikePressure) / 1.2, 0, 1) * 1.85;
 
   // Random direction for the aim offset (each axis independently).
   const aimRow = 2 + (rng() < 0.5 ? -1 : 1) * aimOffset * (0.5 + rng() * 0.5);

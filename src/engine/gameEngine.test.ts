@@ -165,13 +165,24 @@ test('once a bench player enters the lineup as a pinch hitter/runner, he is remo
       const everUsedBenchIds = new Set<string>();
 
       for (const half of halves) {
+        // Build a set of players who entered this half-inning via substitution.
+        const enteredThisHalf = new Set<string>();
         for (const sub of half.substitutions) {
           if (sub.type === 'pinchHitter' || sub.type === 'pinchRunner') {
+            enteredThisHalf.add(sub.incoming.id);
             everUsedBenchIds.add(sub.incoming.id);
             foundAnySubstitution = true;
-            // The player who just entered must be on the field, not the bench.
-            assert.ok(half.lineup.some((b) => b.id === sub.incoming.id));
           }
+        }
+        // Each player who entered via substitution must appear in the
+        // final lineup OR have themselves been replaced by a subsequent
+        // substitution (e.g. pinch hitter who later got a pinch runner).
+        for (const id of enteredThisHalf) {
+          const inLineup = half.lineup.some((b) => b.id === id);
+          const laterReplaced = half.substitutions.some(
+            (sub) => (sub.type === 'pinchHitter' || sub.type === 'pinchRunner') && sub.outgoing.id === id,
+          );
+          assert.ok(inLineup || laterReplaced, `bench player ${id} should be in lineup or later replaced`);
         }
         // No one who has ever come off the bench can return to the bench
         // (even if a pinch hitter is later lifted for a pinch runner).
