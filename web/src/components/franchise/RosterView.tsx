@@ -45,10 +45,17 @@ function playerPosition(p: PlayerProfile): string {
 
 interface Props {
   franchise: FranchiseState;
+  selectedTeamId?: string;
+  onTeamChange?: (id: string) => void;
 }
 
-export function RosterView({ franchise }: Props) {
-  const [teamId, setTeamId] = useState(franchise.teams[0]?.teamId ?? '');
+export function RosterView({ franchise, selectedTeamId, onTeamChange }: Props) {
+  const [localTeamId, setLocalTeamId] = useState(franchise.teams[0]?.teamId ?? '');
+  const teamId = selectedTeamId ?? localTeamId;
+  const setTeamId = (id: string) => {
+    setLocalTeamId(id);
+    onTeamChange?.(id);
+  };
 
   const team = franchise.teams.find((t) => t.teamId === teamId);
   if (!team) return null;
@@ -170,18 +177,27 @@ export function RosterView({ franchise }: Props) {
 
 interface TransactionLogProps {
   franchise: FranchiseState;
+  selectedTeamId?: string;
 }
 
-export function TransactionLog({ franchise }: TransactionLogProps) {
+export function TransactionLog({ franchise, selectedTeamId }: TransactionLogProps) {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [yearFilter, setYearFilter] = useState<string>('all');
 
-  const years = [...new Set(franchise.transactionLog.map((r) => r.year))].sort((a, b) => b - a);
-  const types = [...new Set(franchise.transactionLog.map((r) => r.type))];
+  const teamLog = selectedTeamId
+    ? franchise.transactionLog.filter((r) => r.teamId === selectedTeamId)
+    : franchise.transactionLog;
 
-  const filtered = [...franchise.transactionLog]
+  const years = [...new Set(teamLog.map((r) => r.year))].sort((a, b) => b - a);
+  const types = [...new Set(teamLog.map((r) => r.type))];
+
+  const filtered = [...teamLog]
     .reverse()
-    .filter((r) => (typeFilter === 'all' || r.type === typeFilter) && (yearFilter === 'all' || r.year === Number(yearFilter)));
+    .filter((r) => {
+      if (typeFilter !== 'all' && r.type !== typeFilter) return false;
+      if (yearFilter !== 'all' && r.year !== Number(yearFilter)) return false;
+      return true;
+    });
 
   if (franchise.transactionLog.length === 0) {
     return <p className="description">아직 트랜잭션 기록이 없습니다. 시즌을 진행하면 기록이 쌓입니다.</p>;

@@ -71,11 +71,12 @@ export function runDomesticFAMarket(
   teams: readonly TeamFranchiseState[],
   freeAgents: readonly PlayerProfile[],
   rng: () => number,
-): { teams: TeamFranchiseState[]; signed: PlayerProfile[]; unsigned: PlayerProfile[] } {
+): { teams: TeamFranchiseState[]; signed: PlayerProfile[]; unsigned: PlayerProfile[]; signingTeams: Map<string, string> } {
   const rosters = new Map<string, PlayerProfile[]>(teams.map((t) => [t.teamId, [...t.roster]]));
   const signingsPerTeam = new Map<string, number>(teams.map((t) => [t.teamId, 0]));
   const signed: PlayerProfile[] = [];
   const unsigned: PlayerProfile[] = [];
+  const signingTeams = new Map<string, string>();
 
   const sorted = [...freeAgents].sort((a, b) => playerValue(b) - playerValue(a));
 
@@ -111,8 +112,9 @@ export function runDomesticFAMarket(
     rosters.get(bestTeam)!.push(signedPlayer);
     signingsPerTeam.set(bestTeam, (signingsPerTeam.get(bestTeam) ?? 0) + 1);
     signed.push(signedPlayer);
+    signingTeams.set(signedPlayer.playerId, bestTeam);
   }
 
   const updatedTeams = teams.map((t) => ({ ...t, roster: rosters.get(t.teamId)! }));
-  return { teams: updatedTeams, signed, unsigned };
+  return { teams: updatedTeams, signed, unsigned, signingTeams };
 }

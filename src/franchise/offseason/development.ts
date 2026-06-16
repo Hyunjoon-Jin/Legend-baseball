@@ -90,6 +90,10 @@ function retirementProbability(profile: PlayerProfile): number {
   const overall = overallRating(profile);
   const age = profile.age;
 
+  // Players under 28 never retire — they're still developing regardless of
+  // current rating. Retirement pressure only builds as OVR declines with age.
+  if (age < 28) return 0;
+
   const perfFactor = Math.max(0, (50 - overall) * 0.025);
   const ageFactor = Math.max(0, age - 37) * Math.max(0, (60 - overall) / 600);
 

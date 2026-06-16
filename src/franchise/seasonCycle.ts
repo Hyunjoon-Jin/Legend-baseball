@@ -102,12 +102,9 @@ function runAiTradeMarket(
       traded.add(idA);
       traded.add(idB);
 
-      transactionLog.push({
-        year,
-        type: 'trade',
-        playerIds: [counter.playerId, offer.playerId],
-        description: `트레이드: ${counter.attributes.name} (${idA}→${idB}) ↔ ${offer.attributes.name} (${idB}→${idA})`,
-      });
+      const tradeDesc = `트레이드: ${counter.attributes.name} (${idA}→${idB}) ↔ ${offer.attributes.name} (${idB}→${idA})`;
+      transactionLog.push({ year, type: 'trade', teamId: idA, playerIds: [counter.playerId, offer.playerId], description: tradeDesc });
+      transactionLog.push({ year, type: 'trade', teamId: idB, playerIds: [counter.playerId, offer.playerId], description: tradeDesc });
       break;
     }
   }
@@ -254,9 +251,15 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
   const { teams: afterForeign } = runForeignSigningMarket(afterDecrement, foreignPool, rng);
   const { teams: afterAsiaQuota } = runAsiaQuotaSigningMarket(afterForeign, asiaPool, rng);
 
+  // Map playerId → teamId so we can attach teamId to fa-declaration log entries.
+  const playerTeamMap = new Map<string, string>();
+  for (const team of afterAsiaQuota) {
+    for (const player of team.roster) playerTeamMap.set(player.playerId, team.teamId);
+  }
+
   const { teams: afterFADecl, newFreeAgents } = processFADeclarations(afterAsiaQuota);
   const allFAs = [...state.domesticFreeAgents, ...newFreeAgents];
-  const { teams: afterSigning, signed, unsigned } = runDomesticFAMarket(afterFADecl, allFAs, rng);
+  const { teams: afterSigning, signed, unsigned, signingTeams } = runDomesticFAMarket(afterFADecl, allFAs, rng);
 
   // FA departures may have left 1군 vacancies; promote best 2군 players to fill them.
   const afterReplenish = afterSigning.map((t) => ({
@@ -281,6 +284,7 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
     transactionLog.push({
       year: state.year,
       type: 'fa-declaration',
+      teamId: playerTeamMap.get(fa.playerId),
       playerIds: [fa.playerId],
       description: `FA 선언: ${fa.attributes.name} (${fa.age}세)`,
     });
@@ -289,6 +293,7 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
     transactionLog.push({
       year: state.year,
       type: 'signing',
+      teamId: signingTeams.get(p.playerId),
       playerIds: [p.playerId],
       description: `FA 영입: ${p.attributes.name}`,
     });

@@ -141,6 +141,7 @@ function SetupForm({ onStart }: SetupFormProps) {
 export function FranchiseMode() {
   const [franchise, setFranchise] = useState<FranchiseState | null>(null);
   const [subTab, setSubTab] = useState<SubTab>('roster');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -148,6 +149,7 @@ export function FranchiseMode() {
     try {
       const state = createFranchiseState(seed);
       setFranchise(state);
+      setSelectedTeamId(state.teams[0]?.teamId ?? '');
       setSubTab('roster');
       setError(null);
     } catch (e) {
@@ -226,9 +228,9 @@ export function FranchiseMode() {
       </nav>
 
       {/* Content */}
-      {subTab === 'roster' && <RosterView franchise={franchise} />}
+      {subTab === 'roster' && <RosterView franchise={franchise} selectedTeamId={selectedTeamId} onTeamChange={setSelectedTeamId} />}
       {subTab === 'season' && <SeasonResultView franchise={franchise} />}
-      {subTab === 'transactions' && <TransactionLog franchise={franchise} />}
+      {subTab === 'transactions' && <TransactionLog franchise={franchise} selectedTeamId={selectedTeamId} />}
 
       {/* Offseason summary cards */}
       {subTab === 'season' && franchise.lastSeasonResult && (

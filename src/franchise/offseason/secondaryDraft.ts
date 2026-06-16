@@ -58,10 +58,17 @@ export function runSecondaryDraft(
   const selectedIds = new Set<string>();
   const order = draftOrder(teams, lastSeasonResult);
 
+  // KBO rule: a team may lose at most 2 players per secondary draft cycle.
+  const MAX_TAKEN_FROM_TEAM = 2;
+  const takenFromTeam = new Map<string, number>(teams.map((t) => [t.teamId, 0]));
+
   for (let round = 1; round <= SECONDARY_DRAFT_ROUNDS; round++) {
     for (const teamId of order) {
       const candidates = exposed.filter(
-        (e) => e.fromTeamId !== teamId && !selectedIds.has(e.player.playerId),
+        (e) =>
+          e.fromTeamId !== teamId &&
+          !selectedIds.has(e.player.playerId) &&
+          (takenFromTeam.get(e.fromTeamId) ?? 0) < MAX_TAKEN_FROM_TEAM,
       );
       if (candidates.length === 0) break;
 
@@ -73,6 +80,7 @@ export function runSecondaryDraft(
       );
 
       selectedIds.add(best.player.playerId);
+      takenFromTeam.set(best.fromTeamId, (takenFromTeam.get(best.fromTeamId) ?? 0) + 1);
 
       // Remove from original team's mutable roster.
       const oldRoster = rosters.get(best.fromTeamId)!;
