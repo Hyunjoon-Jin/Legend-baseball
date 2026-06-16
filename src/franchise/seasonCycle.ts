@@ -6,6 +6,10 @@ import { advanceInjuries, rollInjuries } from '../roster/injuries.js';
 import { fillRosterGaps } from '../roster/callUps.js';
 import { overallRating } from '../roster/rating.js';
 import { developRoster } from './offseason/development.js';
+import { decrementContracts, processFADeclarations, runDomesticFAMarket } from './offseason/freeAgency.js';
+import { runForeignSigningMarket } from './offseason/foreignSigning.js';
+import { runAsiaQuotaSigningMarket } from './offseason/asiaQuotaSigning.js';
+import { generateForeignFreeAgentPool, generateAsiaQuotaFreeAgentPool } from '../data/playerPoolGenerator.js';
 import { ACTIVE_ROSTER_SIZE, EXPANDED_ROSTER_SIZE, EXPANSION_GAME_INDEX } from '../roster/constants.js';
 import { playerValue } from './trade/evaluation.js';
 import { buildPostTradeRosters } from './trade/execution.js';
@@ -63,6 +67,23 @@ function runAiTradeMarket(
       description: `트레이드: ${idA} ↔ ${idB}`,
     });
   }
+}
+
+/**
+ * Promotes the highest-`overallRating` `2군` players to `1군` until the
+ * active roster reaches `targetActive`. Called at the end of the offseason
+ * after FA departures may have left vacancies in the active roster.
+ */
+function replenishActiveRoster(roster: readonly PlayerProfile[], targetActive: number): PlayerProfile[] {
+  const activeCount = roster.filter((p) => p.rosterStatus === '1군').length;
+  if (activeCount >= targetActive) return [...roster];
+
+  const toPromote = [...roster.filter((p) => p.rosterStatus === '2군')]
+    .sort((a, b) => overallRating(b) - overallRating(a))
+    .slice(0, targetActive - activeCount);
+
+  const promoteSet = new Set(toPromote.map((p) => p.playerId));
+  return roster.map((p) => (promoteSet.has(p.playerId) ? { ...p, rosterStatus: '1군' as const } : p));
 }
 
 /**
@@ -166,13 +187,51 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
     return { ...team, roster: developed };
   });
 
+  // --- offseason markets ---
+  const afterDecrement = teams.map((t) => ({ ...t, roster: decrementContracts(t.roster) }));
+
+  const foreignPool = generateForeignFreeAgentPool(state.year + 1, 20, rng);
+  const asiaPool = generateAsiaQuotaFreeAgentPool(state.year + 1, 10, rng);
+  const { teams: afterForeign } = runForeignSigningMarket(afterDecrement, foreignPool, rng);
+  const { teams: afterAsiaQuota } = runAsiaQuotaSigningMarket(afterForeign, asiaPool, rng);
+
+  const { teams: afterFADecl, newFreeAgents } = processFADeclarations(afterAsiaQuota, rng);
+  const allFAs = [...state.domesticFreeAgents, ...newFreeAgents];
+  const { teams: afterSigning, signed, unsigned } = runDomesticFAMarket(afterFADecl, allFAs, rng);
+
+  // FA departures may have left 1군 vacancies; promote best 2군 players to fill them.
+  const finalTeams = afterSigning.map((t) => ({
+    ...t,
+    roster: replenishActiveRoster(t.roster, ACTIVE_ROSTER_SIZE),
+  }));
+
+  for (const fa of newFreeAgents) {
+    transactionLog.push({
+      year: state.year,
+      type: 'fa-declaration',
+      playerIds: [fa.playerId],
+      description: `FA 선언: ${fa.attributes.name} (${fa.age}세)`,
+    });
+  }
+  for (const p of signed) {
+    transactionLog.push({
+      year: state.year,
+      type: 'signing',
+      playerIds: [p.playerId],
+      description: `FA 영입: ${p.attributes.name}`,
+    });
+  }
+
   return {
     ...state,
     year: state.year + 1,
     phase: 'preseason',
-    teams,
+    teams: finalTeams,
     retiredPlayers,
     transactionLog,
+    domesticFreeAgents: unsigned,
+    foreignFreeAgents: [],
+    asiaQuotaFreeAgents: [],
     lastSeasonResult: result,
   };
 }

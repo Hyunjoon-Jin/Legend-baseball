@@ -12,7 +12,7 @@ export interface TeamFranchiseState {
 }
 
 /** Kinds of roster moves recorded in `FranchiseState.transactionLog` for UI display. */
-export type TransactionType = 'retirement' | 'trade';
+export type TransactionType = 'retirement' | 'trade' | 'fa-declaration' | 'signing';
 
 /** A single logged roster move (trade/signing/release/retirement/...), for UI display. */
 export interface TransactionRecord {
