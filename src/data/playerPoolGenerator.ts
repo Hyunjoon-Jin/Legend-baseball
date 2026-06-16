@@ -192,13 +192,20 @@ type SlotTier = 'core' | 'depth1' | 'depth2';
 
 /**
  * Approximate KBO 1군 service time for a player of the given age.
- * KBO pros typically enter at 18-19 (고졸) or 22 (대졸), but mandatory
- * military service (~2 years) and time in 2군 mean service time accumulates
- * roughly from age 23 onwards. This matches the real KBO pattern where
- * most first FA declarations happen at ages 31-34.
+ *
+ * Each player has a different effective "service start age" depending on
+ * their path into professional baseball:
+ *   - 군면제(sports exemption) / 조기입단: started accumulating at 18-19 (rare)
+ *   - 대졸 / 산업기능요원: started around 21-22
+ *   - 일반 현역 군복무: started around 22-23
+ *
+ * Modelled as a normal distribution (mean 21, std 1.5, clamped 18-24),
+ * which produces the real KBO pattern: most first FA declarations at 29-31,
+ * rare early-FA cases at 27-28 (군면제 등), and some late ones at 32+.
  */
-function serviceTimeFromAge(age: number): number {
-  return clamp(age - 23, 0, 20);
+function serviceTimeFromAge(age: number, rng: () => number): number {
+  const entryAge = clamp(Math.round(sampleNormal(21, 1.5, rng)), 18, 24);
+  return clamp(age - entryAge, 0, 20);
 }
 
 function buildContract(serviceTimeYears: number, overall: number, rng: () => number) {
@@ -243,7 +250,7 @@ function assignAgePotential(overall: number, tier: SlotTier, rng: () => number):
 function makeBatterProfile(attrs: BatterAttributes, position: Position, tier: SlotTier, rng: () => number): PlayerProfile {
   const overall = batterOverallRating(attrs);
   const { age, potential } = assignAgePotential(overall, tier, rng);
-  const serviceTimeYears = serviceTimeFromAge(age);
+  const serviceTimeYears = serviceTimeFromAge(age, rng);
   return {
     playerId: attrs.id,
     kind: 'batter',
@@ -261,7 +268,7 @@ function makeBatterProfile(attrs: BatterAttributes, position: Position, tier: Sl
 function makePitcherProfile(attrs: PitcherAttributes, tier: SlotTier, rng: () => number): PlayerProfile {
   const overall = pitcherOverallRating(attrs);
   const { age, potential } = assignAgePotential(overall, tier, rng);
-  const serviceTimeYears = serviceTimeFromAge(age);
+  const serviceTimeYears = serviceTimeFromAge(age, rng);
   return {
     playerId: attrs.id,
     kind: 'pitcher',
