@@ -39,11 +39,21 @@ export const SECONDARY_DRAFT_PROTECTED_SIZE = 35;
  */
 export const FA_ELIGIBILITY_YEARS = 9;
 
+/**
+ * Team-games registered on the 1군 active roster equivalent to one full year
+ * of service time (KBO's 등록일수 rule, approximated in game-count units
+ * since this simulation has no separate calendar/off-day concept — one
+ * scheduled team-game stands in for one registration day). A player
+ * registered for fewer games this season carries the remainder into next
+ * season via `registeredDaysCarry` rather than losing it.
+ */
+export const GAMES_PER_SERVICE_YEAR = 144;
+
 /** Age at which retirement probability starts becoming meaningful. */
 export const RETIREMENT_SOFT_AGE = 36;
 
-/** Age at which a player is forced to retire. */
-export const RETIREMENT_HARD_AGE = 43;
+/** Age at which a player is forced to retire (physical impossibility past this point). */
+export const RETIREMENT_HARD_AGE = 50;
 
 /** Age at which batter ratings peak before decline begins. */
 export const PEAK_AGE_BATTER = 27;

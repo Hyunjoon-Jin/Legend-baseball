@@ -93,7 +93,9 @@ export interface PlayerProfile {
   rosterStatus: RosterStatus;
   origin: PlayerOrigin;
   contract: ContractInfo;
-  serviceTimeYears: number;     // FA 자격 판정용 (1군 등록일수 기준을 연 단위로 단순화)
+  serviceTimeYears: number;     // FA 자격 판정용. 시즌 중 실제 1군 등록 경기수(GAMES_PER_SERVICE_YEAR
+                                 // 누적 시 1년 적립)로만 증가 — 2군에만 있던 선수는 적립되지 않음.
+  registeredDaysCarry?: number; // 1년 미만의 1군 등록 경기 누적분(다음 시즌으로 이월). undefined는 0과 동일.
   injury?: InjuryStatus;
 }
 ```
@@ -270,10 +272,18 @@ export interface PlayerProfile {
 `src/franchise/offseason/development.ts`, 매 오프시즌 모든 비은퇴 선수 대상:
 
 ```typescript
-export function ageOnePlayer(profile: PlayerProfile, rng: () => number): PlayerProfile
+export function ageOnePlayer(profile: PlayerProfile, registeredGames: number, rng: () => number): PlayerProfile
 ```
 
-- `age += 1`, `serviceTimeYears += 1`.
+- `age += 1`.
+- **서비스타임 적립** (`registeredGames` = 시즌 중 그 팀의 경기 가운데 이 선수가
+  `rosterStatus === '1군'`으로 등록되어 있던 경기 수 — `seasonCycle.ts`가
+  `onBeforeGame` 훅에서 매 경기마다 누적):
+  - `totalDays = (registeredDaysCarry ?? 0) + registeredGames`
+  - `yearsEarned = floor(totalDays / GAMES_PER_SERVICE_YEAR)`, `serviceTimeYears += yearsEarned`
+  - `registeredDaysCarry = totalDays % GAMES_PER_SERVICE_YEAR` (다음 시즌으로 이월)
+  - 2군에만 머문 선수는 `registeredGames = 0`이므로 서비스타임이 늘지 않음 — 나이만으로
+    FA 자격이 쌓이던 기존 단순화를 제거.
 - **성장/하락 곡선**:
   - `peakAge = kind === 'batter' ? PEAK_AGE_BATTER : PEAK_AGE_PITCHER`
   - `age < peakAge`: 각 스케일 가능 능력치를 `potential` 방향으로

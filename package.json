@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test src/**/*.test.ts",
+    "test": "node --import tsx --test $(find src -name '*.test.ts')",
     "demo": "tsx src/demo.ts",
     "season": "tsx src/seasonSim.ts",
     "kbo-season": "tsx src/kboSeason.ts",

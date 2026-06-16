@@ -89,6 +89,33 @@ test('playFranchiseSeason advances the year, ages every surviving player, and ar
   }
 });
 
+test('playFranchiseSeason only credits service time for games actually spent on 1군', () => {
+  const state = initialFranchiseState(80);
+
+  const serviceBefore = new Map<string, number>();
+  for (const team of state.teams) {
+    for (const p of team.roster) serviceBefore.set(p.playerId, p.serviceTimeYears);
+  }
+
+  const result = playFranchiseSeason(state, mulberry32(81));
+
+  let unchangedCount = 0;
+  let increasedCount = 0;
+  for (const team of result.teams) {
+    for (const p of team.roster) {
+      const before = serviceBefore.get(p.playerId);
+      if (before === undefined) continue; // new draft/import player this offseason
+      const delta = p.serviceTimeYears - before;
+      assert.ok(delta === 0 || delta === 1, 'a single season can credit at most one service year');
+      if (delta === 0) unchangedCount++;
+      else increasedCount++;
+    }
+  }
+
+  assert.ok(unchangedCount > 0, 'players who spent the season on 2군 should not accrue a service year');
+  assert.ok(increasedCount > 0, 'players who spent the season on 1군 should accrue a service year');
+});
+
 test('playFranchiseSeason can be chained across multiple seasons', () => {
   const state0 = initialFranchiseState(70);
   const rng = mulberry32(71);

@@ -2,7 +2,7 @@ import type { PlayerProfile } from '../../types/roster.js';
 import type { BatterAttributes, PitcherAttributes } from '../../types/player.js';
 import { overallRating } from '../../roster/rating.js';
 import { clamp } from '../../utils/math.js';
-import { PEAK_AGE_BATTER, PEAK_AGE_PITCHER } from '../../roster/constants.js';
+import { PEAK_AGE_BATTER, PEAK_AGE_PITCHER, GAMES_PER_SERVICE_YEAR, RETIREMENT_HARD_AGE } from '../../roster/constants.js';
 
 /** Numeric 0-100 batter attributes that grow toward `potential` before peak age and decline after. */
 type BatterScalableField =
@@ -101,34 +101,61 @@ function retirementProbability(profile: PlayerProfile): number {
 }
 
 /**
- * Ages one player by a year: increments `age` and `serviceTimeYears`, then
- * grows or declines scalable attributes. Retirement is driven by performance:
- * a player whose OVR drops below ~50 due to the aging curve will face
- * increasing retirement probability, while a still-elite player at 40 will
- * almost never retire. Hard cap at age 50 (physical impossibility).
+ * Converts this season's 1군-registered team-games (plus any carried-over
+ * partial-year credit) into a `serviceTimeYears` increment and a new carry
+ * remainder, mirroring KBO's cumulative 등록일수 system: a player needs
+ * `GAMES_PER_SERVICE_YEAR` total registered games to earn a full year, and
+ * a season that falls short simply rolls its days into next year's total
+ * rather than granting credit outright.
  */
-export function ageOnePlayer(profile: PlayerProfile, rng: () => number): PlayerProfile {
+function accrueServiceTime(profile: PlayerProfile, registeredGames: number): { serviceTimeYears: number; registeredDaysCarry: number } {
+  const totalDays = (profile.registeredDaysCarry ?? 0) + registeredGames;
+  const yearsEarned = Math.floor(totalDays / GAMES_PER_SERVICE_YEAR);
+  return {
+    serviceTimeYears: profile.serviceTimeYears + yearsEarned,
+    registeredDaysCarry: totalDays % GAMES_PER_SERVICE_YEAR,
+  };
+}
+
+/**
+ * Ages one player by a year: increments `age`, grows or declines scalable
+ * attributes, and credits service time only for `registeredGames` — the
+ * number of this team's games the player actually spent on the 1군 active
+ * roster this season (0 for a player who stayed on 2군/IL all year).
+ * Retirement is driven by performance: a player whose OVR drops below ~50
+ * due to the aging curve will face increasing retirement probability, while
+ * a still-elite player at 40 will almost never retire. Hard cap at age 50
+ * (physical impossibility).
+ */
+export function ageOnePlayer(profile: PlayerProfile, registeredGames: number, rng: () => number): PlayerProfile {
   const age = profile.age + 1;
   const attributes = profile.kind === 'batter'
     ? developBatterAttributes(profile.attributes as BatterAttributes, profile.potential, age, rng)
     : developPitcherAttributes(profile.attributes as PitcherAttributes, profile.potential, age, rng);
 
-  const aged: PlayerProfile = { ...profile, age, serviceTimeYears: profile.serviceTimeYears + 1, attributes };
+  const { serviceTimeYears, registeredDaysCarry } = accrueServiceTime(profile, registeredGames);
+  const aged: PlayerProfile = { ...profile, age, serviceTimeYears, registeredDaysCarry, attributes };
 
-  const retires = age >= 50 || rng() < retirementProbability(aged);
+  const retires = age >= RETIREMENT_HARD_AGE || rng() < retirementProbability(aged);
   return retires ? { ...aged, rosterStatus: '은퇴' as const } : aged;
 }
 
 /**
  * Ages every player in `roster` by one year via `ageOnePlayer`, splitting out
- * anyone who retired this offseason into a separate list.
+ * anyone who retired this offseason into a separate list. `registeredGames`
+ * maps `playerId` to the number of this team's games they spent on the 1군
+ * active roster this season (missing entries count as 0).
  */
-export function developRoster(roster: readonly PlayerProfile[], rng: () => number): { roster: PlayerProfile[]; retired: PlayerProfile[] } {
+export function developRoster(
+  roster: readonly PlayerProfile[],
+  registeredGames: ReadonlyMap<string, number>,
+  rng: () => number,
+): { roster: PlayerProfile[]; retired: PlayerProfile[] } {
   const remaining: PlayerProfile[] = [];
   const retired: PlayerProfile[] = [];
 
   for (const profile of roster) {
-    const aged = ageOnePlayer(profile, rng);
+    const aged = ageOnePlayer(profile, registeredGames.get(profile.playerId) ?? 0, rng);
     (aged.rosterStatus === '은퇴' ? retired : remaining).push(aged);
   }
 

@@ -43,6 +43,13 @@ export interface PlayerProfile {
   contract: ContractInfo;
   /** Years of top-level service time, used for FA eligibility. */
   serviceTimeYears: number;
+  /**
+   * Registered-1군-days credit accumulated toward the next `serviceTimeYears`
+   * increment but not yet enough for a full year (KBO's cumulative
+   * 등록일수 system). Carries across seasons; resets to the remainder once
+   * it crosses `GAMES_PER_SERVICE_YEAR`. Undefined is equivalent to 0.
+   */
+  registeredDaysCarry?: number;
   /** Nationality flavor for foreign / Asia-quota players. */
   nationality?: string;
   injury?: InjuryStatus;

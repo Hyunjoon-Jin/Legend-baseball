@@ -160,6 +160,12 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
   const teamIds = state.teams.map((t) => t.teamId);
   let tradeMarketDone = false;
 
+  // Counts, per player, how many of this team's games they spent registered
+  // on the 1군 active roster this season — the real basis for service time
+  // (see `accrueServiceTime` in offseason/development.ts), as opposed to
+  // just being on the org's books at all.
+  const registeredGames = new Map<string, number>();
+
   const leagueTeams = state.teams.map((team) => {
     rosters.set(team.teamId, team.roster);
     return buildLeagueTeam(team.teamId, team.name, team.roster);
@@ -188,6 +194,12 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
       const { roster: afterCallUp, events: callUpEvents } = fillRosterGaps(afterInjury, injuryEvents.map((e) => e.playerId));
       roster = afterCallUp;
       if (injuryEvents.length > 0 || callUpEvents.length > 0) changed = true;
+
+      for (const p of roster) {
+        if (p.rosterStatus === '1군') {
+          registeredGames.set(p.playerId, (registeredGames.get(p.playerId) ?? 0) + 1);
+        }
+      }
 
       rosters.set(teamId, roster);
       return changed ? buildLeagueTeam(teamId, team.setup.name, roster) : undefined;
@@ -219,7 +231,7 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
     });
     roster = capActiveRoster(roster, ACTIVE_ROSTER_SIZE);
 
-    const { roster: developed, retired } = developRoster(roster, rng);
+    const { roster: developed, retired } = developRoster(roster, registeredGames, rng);
     for (const player of retired) {
       retiredPlayers.push(player);
       transactionLog.push({
