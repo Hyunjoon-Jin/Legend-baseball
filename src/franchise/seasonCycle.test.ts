@@ -74,10 +74,13 @@ test('playFranchiseSeason advances the year, ages every surviving player, and ar
     assert.ok(p.age >= RETIREMENT_SOFT_AGE);
   }
 
-  assert.equal(result.transactionLog.length, result.retiredPlayers.length);
-  for (const record of result.transactionLog) {
-    assert.equal(record.type, 'retirement');
-    assert.equal(record.year, state.year);
+  const retirementRecords = result.transactionLog.filter((r) => r.type === 'retirement');
+  const tradeRecords = result.transactionLog.filter((r) => r.type === 'trade');
+  assert.equal(retirementRecords.length, result.retiredPlayers.length);
+  for (const r of retirementRecords) assert.equal(r.year, state.year);
+  for (const r of tradeRecords) {
+    assert.equal(r.year, state.year);
+    assert.ok(r.playerIds.length >= 2);
   }
 
   const rosterCount = result.teams.reduce((sum, t) => sum + t.roster.length, 0);

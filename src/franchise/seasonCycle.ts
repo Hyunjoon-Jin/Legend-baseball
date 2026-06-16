@@ -7,8 +7,63 @@ import { fillRosterGaps } from '../roster/callUps.js';
 import { overallRating } from '../roster/rating.js';
 import { developRoster } from './offseason/development.js';
 import { ACTIVE_ROSTER_SIZE, EXPANDED_ROSTER_SIZE, EXPANSION_GAME_INDEX } from '../roster/constants.js';
-import type { FranchiseState, TeamFranchiseState } from './types.js';
+import { playerValue } from './trade/evaluation.js';
+import { buildPostTradeRosters } from './trade/execution.js';
+import type { FranchiseState, TeamFranchiseState, TransactionRecord } from './types.js';
 import type { PlayerProfile } from '../types/roster.js';
+
+/** Game index at which AI teams make their one mid-season trade attempt (well before the deadline). */
+const TRADE_MARKET_GAME = 30;
+
+/**
+ * Pairs teams randomly and proposes a "best bench-for-bench" swap for each
+ * pair — executing the trade (via `buildPostTradeRosters`) when both sides'
+ * top 2군 players are within 10 value points of each other. Mutates `rosters`
+ * in-place and appends records to `transactionLog`.
+ */
+function runAiTradeMarket(
+  teamIds: readonly string[],
+  rosters: Map<string, PlayerProfile[]>,
+  year: number,
+  transactionLog: TransactionRecord[],
+  rng: () => number,
+): void {
+  const shuffled = [...teamIds].sort(() => rng() - 0.5);
+  const traded = new Set<string>();
+  const TOLERANCE = 10;
+
+  for (let i = 0; i + 1 < shuffled.length; i += 2) {
+    const idA = shuffled[i];
+    const idB = shuffled[i + 1];
+    if (traded.has(idA) || traded.has(idB)) continue;
+
+    const rA = rosters.get(idA)!;
+    const rB = rosters.get(idB)!;
+
+    const bestA = [...rA.filter((p) => p.rosterStatus === '2군')].sort((a, b) => playerValue(b) - playerValue(a))[0];
+    const bestB = [...rB.filter((p) => p.rosterStatus === '2군')].sort((a, b) => playerValue(b) - playerValue(a))[0];
+    if (!bestA || !bestB) continue;
+
+    if (Math.abs(playerValue(bestA) - playerValue(bestB)) > TOLERANCE) continue;
+
+    const [newA, newB] = buildPostTradeRosters(
+      { teamAId: idA, teamBId: idB, playersFromA: [bestA.playerId], playersFromB: [bestB.playerId] },
+      rA,
+      rB,
+    );
+    rosters.set(idA, newA);
+    rosters.set(idB, newB);
+    traded.add(idA);
+    traded.add(idB);
+
+    transactionLog.push({
+      year,
+      type: 'trade',
+      playerIds: [bestA.playerId, bestB.playerId],
+      description: `트레이드: ${idA} ↔ ${idB}`,
+    });
+  }
+}
 
 /**
  * Demotes the lowest-`overallRating` excess `1군` players to `2군` so the
@@ -39,6 +94,9 @@ function capActiveRoster(roster: readonly PlayerProfile[], maxActive: number): P
 export function playFranchiseSeason(state: FranchiseState, rng: () => number, options: GameOptions = {}): FranchiseState {
   const rosters = new Map<string, PlayerProfile[]>();
   const calledUpByTeam = new Map<string, readonly string[]>();
+  const transactionLog: TransactionRecord[] = [...state.transactionLog];
+  const teamIds = state.teams.map((t) => t.teamId);
+  let tradeMarketDone = false;
 
   const leagueTeams = state.teams.map((team) => {
     rosters.set(team.teamId, team.roster);
@@ -47,6 +105,11 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
 
   const hooks: SeasonHooks = {
     onBeforeGame: (gamesPlayed, teamId, team, fatigue) => {
+      if (!tradeMarketDone && gamesPlayed === TRADE_MARKET_GAME) {
+        tradeMarketDone = true;
+        runAiTradeMarket(teamIds, rosters, state.year, transactionLog, rng);
+      }
+
       let roster = rosters.get(teamId)!;
       let changed = false;
 
@@ -71,7 +134,6 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
 
   const result = simulateKboSeason(leagueTeams, options, rng, hooks);
 
-  const transactionLog = [...state.transactionLog];
   const retiredPlayers = [...state.retiredPlayers];
 
   const teams: TeamFranchiseState[] = state.teams.map((team) => {
@@ -80,8 +142,13 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
     const calledUpIds = calledUpByTeam.get(team.teamId);
     if (calledUpIds) roster = revertRosterExpansion(roster, calledUpIds);
 
-    // Offseason: any remaining injuries heal up before next season.
-    roster = roster.map((p) => (p.rosterStatus === '부상자명단' ? { ...p, rosterStatus: '2군' as const, injury: undefined } : p));
+    // Offseason: all remaining injuries heal. '부상자명단' players return to '2군';
+    // any player carrying a stale injury field (e.g. from expansion revert) also clears it.
+    roster = roster.map((p) => {
+      if (p.rosterStatus === '부상자명단') return { ...p, rosterStatus: '2군' as const, injury: undefined };
+      if (p.injury) return { ...p, injury: undefined };
+      return p;
+    });
     roster = capActiveRoster(roster, ACTIVE_ROSTER_SIZE);
 
     const { roster: developed, retired } = developRoster(roster, rng);
