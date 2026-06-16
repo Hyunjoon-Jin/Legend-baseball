@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/pitcher-batter-matchup-algo-rbkmhm]
+    branches: [claude/pitcher-batter-matchup-algo-rbkmhm, claude/upbeat-hawking-r3o1tu]
   workflow_dispatch:
 
 permissions:

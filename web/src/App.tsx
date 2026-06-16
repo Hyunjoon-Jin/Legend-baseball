@@ -3,14 +3,16 @@ import './App.css';
 import { LeagueSetup } from './components/LeagueSetup';
 import { GameSimulator } from './components/GameSimulator';
 import { SeasonSimulator } from './components/SeasonSimulator';
+import { FranchiseMode } from './components/FranchiseMode';
 import type { LeagueResponse } from './api/types';
 
-type Tab = 'league' | 'game' | 'season';
+type Tab = 'league' | 'game' | 'season' | 'franchise';
 
-const TABS: { id: Tab; label: string }[] = [
+const TABS: { id: Tab; label: string; requiresLeague?: boolean }[] = [
   { id: 'league', label: '리그 설정' },
-  { id: 'game', label: '단일 경기' },
-  { id: 'season', label: '시즌 시뮬레이션' },
+  { id: 'game', label: '단일 경기', requiresLeague: true },
+  { id: 'season', label: '시즌 시뮬레이션', requiresLeague: true },
+  { id: 'franchise', label: '프랜차이즈 모드' },
 ];
 
 function App() {
@@ -28,7 +30,7 @@ function App() {
               type="button"
               className={tab === t.id ? 'tab active' : 'tab'}
               onClick={() => setTab(t.id)}
-              disabled={t.id !== 'league' && !league}
+              disabled={!!t.requiresLeague && !league}
             >
               {t.label}
             </button>
@@ -40,6 +42,7 @@ function App() {
         {tab === 'league' && <LeagueSetup league={league} onLeagueChange={setLeague} />}
         {tab === 'game' && league && <GameSimulator league={league} />}
         {tab === 'season' && league && <SeasonSimulator league={league} />}
+        {tab === 'franchise' && <FranchiseMode />}
       </main>
     </div>
   );
