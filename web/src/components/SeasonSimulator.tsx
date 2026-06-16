@@ -1,7 +1,27 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { fetchSeason, randomSeed } from '../api/client';
-import type { LeagueResponse, SeasonResponse } from '../api/types';
+import type { LeagueResponse, SeasonResponse, BatterStatLine, PitcherStatLine } from '../api/types';
 import { ROUND_LABEL_KO } from '../labels';
+import { PlayerModal } from './PlayerModal';
+import type { BatterAttributes, PitcherAttributes } from '../../../src/types/player';
+import type { PlayerProfile } from '../../../src/types/roster';
+
+type AnyAttrs = BatterAttributes | PitcherAttributes;
+
+function makeSyntheticProfile(attrs: AnyAttrs): PlayerProfile {
+  const isBatter = 'contactVsRight' in attrs;
+  return {
+    playerId: attrs.id,
+    kind: isBatter ? 'batter' : 'pitcher',
+    age: 0,
+    potential: 0,
+    rosterStatus: '1군',
+    origin: 'domestic',
+    serviceTimeYears: 0,
+    contract: { yearsRemaining: 0, annualSalary: 0, faEligible: false },
+    attributes: attrs,
+  } as PlayerProfile;
+}
 
 interface Props {
   league: LeagueResponse;
@@ -12,8 +32,41 @@ export function SeasonSimulator({ league }: Props) {
   const [result, setResult] = useState<SeasonResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [playerModal, setPlayerModal] = useState<{
+    profile: PlayerProfile;
+    teamName: string;
+    batting?: BatterStatLine;
+    pitching?: PitcherStatLine;
+    year: number;
+  } | null>(null);
+
+  // Build a flat id→attrs lookup from all teams
+  const playerAttrs = useMemo(() => {
+    const map = new Map<string, { attrs: AnyAttrs; teamName: string }>();
+    for (const team of league.teams) {
+      const name = team.setup.name;
+      for (const b of team.setup.lineup) map.set(b.id, { attrs: b, teamName: name });
+      for (const p of team.rotation) map.set(p.id, { attrs: p, teamName: name });
+      for (const b of team.setup.bench ?? []) map.set(b.id, { attrs: b, teamName: name });
+      for (const p of team.setup.bullpen ?? []) map.set(p.id, { attrs: p, teamName: name });
+    }
+    return map;
+  }, [league]);
 
   const teamName = new Map(league.teams.map((t) => [t.id, t.setup.name]));
+
+  function openPlayer(playerId: string) {
+    if (!result) return;
+    const entry = playerAttrs.get(playerId);
+    if (!entry) return;
+    setPlayerModal({
+      profile: makeSyntheticProfile(entry.attrs),
+      teamName: entry.teamName,
+      batting: result.battingStats[playerId],
+      pitching: result.pitchingStats[playerId],
+      year: result.standings.length > 0 ? new Date().getFullYear() : 0,
+    });
+  }
 
   async function handleSimulate() {
     setLoading(true);
@@ -121,19 +174,32 @@ export function SeasonSimulator({ league }: Props) {
 
           <h3>개인 타격 순위 (최소 300타석)</h3>
           <div className="leaders-grid">
-            <LeaderTable title="타율 (AVG)" entries={result.battingLeaders.avg} format={(v) => v.toFixed(3)} />
-            <LeaderTable title="홈런 (HR)" entries={result.battingLeaders.homeRuns} format={(v) => `${v}`} />
-            <LeaderTable title="타점 (RBI)" entries={result.battingLeaders.rbi} format={(v) => `${v}`} />
-            <LeaderTable title="OPS" entries={result.battingLeaders.ops} format={(v) => v.toFixed(3)} />
+            <LeaderTable title="타율 (AVG)" entries={result.battingLeaders.avg} format={(v) => v.toFixed(3)} onPlayerClick={openPlayer} />
+            <LeaderTable title="홈런 (HR)" entries={result.battingLeaders.homeRuns} format={(v) => `${v}`} onPlayerClick={openPlayer} />
+            <LeaderTable title="타점 (RBI)" entries={result.battingLeaders.rbi} format={(v) => `${v}`} onPlayerClick={openPlayer} />
+            <LeaderTable title="OPS" entries={result.battingLeaders.ops} format={(v) => v.toFixed(3)} onPlayerClick={openPlayer} />
           </div>
 
           <h3>개인 투구 순위 (최소 100이닝)</h3>
           <div className="leaders-grid">
-            <LeaderTable title="평균자책점 (ERA)" entries={result.pitchingLeaders.era} format={(v) => v.toFixed(2)} />
-            <LeaderTable title="탈삼진 (K)" entries={result.pitchingLeaders.strikeouts} format={(v) => `${v}`} />
-            <LeaderTable title="WHIP" entries={result.pitchingLeaders.whip} format={(v) => v.toFixed(2)} />
+            <LeaderTable title="평균자책점 (ERA)" entries={result.pitchingLeaders.era} format={(v) => v.toFixed(2)} onPlayerClick={openPlayer} />
+            <LeaderTable title="탈삼진 (K)" entries={result.pitchingLeaders.strikeouts} format={(v) => `${v}`} onPlayerClick={openPlayer} />
+            <LeaderTable title="WHIP" entries={result.pitchingLeaders.whip} format={(v) => v.toFixed(2)} onPlayerClick={openPlayer} />
           </div>
         </>
+      )}
+
+      {playerModal && (
+        <PlayerModal
+          profile={playerModal.profile}
+          teamName={playerModal.teamName}
+          overrideSeasonStats={{
+            year: playerModal.year,
+            batting: playerModal.batting,
+            pitching: playerModal.pitching,
+          }}
+          onClose={() => setPlayerModal(null)}
+        />
       )}
     </section>
   );
@@ -143,10 +209,12 @@ function LeaderTable({
   title,
   entries,
   format,
+  onPlayerClick,
 }: {
   title: string;
   entries: { playerId: string; name: string; value: number }[];
   format: (value: number) => string;
+  onPlayerClick?: (playerId: string) => void;
 }) {
   return (
     <div>
@@ -156,7 +224,10 @@ function LeaderTable({
           {entries.map((entry, i) => (
             <tr key={entry.playerId}>
               <td>{i + 1}</td>
-              <td>{entry.name}</td>
+              <td
+                className={onPlayerClick ? 'player-link' : ''}
+                onClick={() => onPlayerClick?.(entry.playerId)}
+              >{entry.name}</td>
               <td>{format(entry.value)}</td>
             </tr>
           ))}

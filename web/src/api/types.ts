@@ -8,6 +8,7 @@ import type { PlateAppearanceResult } from '../../../src/types/outcome.js';
 import type { LeagueTeam, PostseasonResult, PostseasonRoundName, StandingsRow } from '../../../src/types/season.js';
 import type { WeatherConditions } from '../../../src/types/situation.js';
 import type { BattingLeaders, LeaderEntry, PitchingLeaders } from '../../../src/season/leaderboards.js';
+import type { BatterStatLine, PitcherStatLine } from '../../../src/stats/types.js';
 
 export type {
   GameResult,
@@ -20,6 +21,7 @@ export type {
   BattingLeaders,
   PitchingLeaders,
 };
+export type { BatterStatLine, PitcherStatLine };
 
 export interface LeagueResponse {
   teams: LeagueTeam[];
@@ -32,4 +34,8 @@ export interface SeasonResponse {
   postseason: PostseasonResult;
   battingLeaders: BattingLeaders;
   pitchingLeaders: PitchingLeaders;
+  /** Full per-player batting stat lines, keyed by player id. */
+  battingStats: Record<string, BatterStatLine>;
+  /** Full per-player pitching stat lines, keyed by player id. */
+  pitchingStats: Record<string, PitcherStatLine>;
 }

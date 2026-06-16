@@ -47,9 +47,10 @@ interface Props {
   franchise: FranchiseState;
   selectedTeamId?: string;
   onTeamChange?: (id: string) => void;
+  onPlayerClick?: (profile: PlayerProfile) => void;
 }
 
-export function RosterView({ franchise, selectedTeamId, onTeamChange }: Props) {
+export function RosterView({ franchise, selectedTeamId, onTeamChange, onPlayerClick }: Props) {
   const [localTeamId, setLocalTeamId] = useState(franchise.teams[0]?.teamId ?? '');
   const teamId = selectedTeamId ?? localTeamId;
   const setTeamId = (id: string) => {
@@ -106,7 +107,10 @@ export function RosterView({ franchise, selectedTeamId, onTeamChange }: Props) {
                 <li key={b.id} className="lineup-item">
                   <span className="lineup-num">{i + 1}</span>
                   <span className="lineup-pos">{p?.position ?? '?'}</span>
-                  <span className="lineup-name">{b.name}</span>
+                  <span
+                    className="lineup-name player-link"
+                    onClick={() => p && onPlayerClick?.(p)}
+                  >{b.name}</span>
                   <span className="lineup-ovr">{p ? overallRating(p) : '-'}</span>
                 </li>
               );
@@ -122,7 +126,10 @@ export function RosterView({ franchise, selectedTeamId, onTeamChange }: Props) {
                 <li key={p.id} className="lineup-item">
                   <span className="lineup-num">{i + 1}</span>
                   <span className="lineup-pos">선발</span>
-                  <span className="lineup-name">{p.name}</span>
+                  <span
+                    className="lineup-name player-link"
+                    onClick={() => prof && onPlayerClick?.(prof)}
+                  >{p.name}</span>
                   <span className="lineup-ovr">{prof ? overallRating(prof) : '-'}</span>
                 </li>
               );
@@ -159,7 +166,7 @@ export function RosterView({ franchise, selectedTeamId, onTeamChange }: Props) {
                     </span>
                   </td>
                   <td>{playerPosition(p)}</td>
-                  <td className="player-name">{p.attributes.name}</td>
+                  <td className="player-name player-link" onClick={() => onPlayerClick?.(p)}>{p.attributes.name}</td>
                   <td>{p.age}</td>
                   <td className="ovr-cell">{overallRating(p)}</td>
                   <td className="pot-cell">{p.potential}</td>

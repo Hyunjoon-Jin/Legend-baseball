@@ -6,9 +6,10 @@ import type { FranchiseState } from '../../../src/franchise/types.js';
 import type { PlayerProfile } from '../../../src/types/roster.js';
 
 export type { FranchiseState };
-export type { TeamFranchiseState, TransactionRecord, TransactionType } from '../../../src/franchise/types.js';
+export type { TeamFranchiseState, TransactionRecord, TransactionType, SeasonStatsSnapshot } from '../../../src/franchise/types.js';
 export type { PlayerProfile };
 export type { DepthChart } from '../../../src/roster/depthChart.js';
+export type { BatterStatLine, PitcherStatLine } from '../../../src/stats/types.js';
 
 function mulberry32(seed: number) {
   return function rng() {
@@ -58,6 +59,7 @@ export function createFranchiseState(seed: number): FranchiseState {
     asiaQuotaFreeAgents: [],
     retiredPlayers: [],
     transactionLog: [],
+    seasonStats: [],
   };
 }
 

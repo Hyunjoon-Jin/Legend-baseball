@@ -5,8 +5,10 @@ import {
   randomSeed,
   KBO_TEAMS,
   type FranchiseState,
+  type PlayerProfile,
 } from '../api/franchiseClient';
 import { RosterView, TransactionLog } from './franchise/RosterView';
+import { PlayerModal } from './PlayerModal';
 import type { StandingsRow } from '../../../src/types/season';
 
 type SubTab = 'roster' | 'season' | 'transactions';
@@ -144,6 +146,7 @@ export function FranchiseMode() {
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [playerModal, setPlayerModal] = useState<{ profile: PlayerProfile; teamName: string } | null>(null);
 
   const handleStart = (seed: number) => {
     try {
@@ -228,9 +231,29 @@ export function FranchiseMode() {
       </nav>
 
       {/* Content */}
-      {subTab === 'roster' && <RosterView franchise={franchise} selectedTeamId={selectedTeamId} onTeamChange={setSelectedTeamId} />}
+      {subTab === 'roster' && (
+        <RosterView
+          franchise={franchise}
+          selectedTeamId={selectedTeamId}
+          onTeamChange={setSelectedTeamId}
+          onPlayerClick={(p) => {
+            const team = franchise.teams.find((t) => t.teamId === selectedTeamId);
+            setPlayerModal({ profile: p, teamName: team?.name ?? '' });
+          }}
+        />
+      )}
       {subTab === 'season' && <SeasonResultView franchise={franchise} />}
       {subTab === 'transactions' && <TransactionLog franchise={franchise} selectedTeamId={selectedTeamId} />}
+
+      {/* Player modal */}
+      {playerModal && (
+        <PlayerModal
+          profile={playerModal.profile}
+          teamName={playerModal.teamName}
+          franchise={franchise}
+          onClose={() => setPlayerModal(null)}
+        />
+      )}
 
       {/* Offseason summary cards */}
       {subTab === 'season' && franchise.lastSeasonResult && (

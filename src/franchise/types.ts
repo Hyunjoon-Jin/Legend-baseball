@@ -1,5 +1,6 @@
 import type { PlayerProfile } from '../types/roster.js';
 import type { KboSeasonResult } from '../season/leagueSim.js';
+import type { BatterStatLine, PitcherStatLine } from '../stats/types.js';
 
 /** Where a franchise sits within the annual season cycle (see `docs/player-operations-plan.md` §1). */
 export type FranchisePhase = 'preseason' | 'regularSeason' | 'postseason' | 'offseason';
@@ -23,6 +24,16 @@ export interface TransactionRecord {
   description: string;
 }
 
+/** A lightweight snapshot of one season's stats for career-record tracking. */
+export interface SeasonStatsSnapshot {
+  year: number;
+  batting: ReadonlyMap<string, BatterStatLine>;
+  pitching: ReadonlyMap<string, PitcherStatLine>;
+  playerNames: ReadonlyMap<string, string>;
+  /** playerId → teamId at the time this season was played. */
+  playerTeams: ReadonlyMap<string, string>;
+}
+
 /** Persistent multi-season state for one franchise (all 10 teams). */
 export interface FranchiseState {
   /** Season year (e.g. 2025). */
@@ -42,4 +53,6 @@ export interface FranchiseState {
   transactionLog: TransactionRecord[];
   /** Stats/standings/postseason from the most recently completed season, if any. */
   lastSeasonResult?: KboSeasonResult;
+  /** Season-by-season stats snapshots for career record display. */
+  seasonStats: SeasonStatsSnapshot[];
 }

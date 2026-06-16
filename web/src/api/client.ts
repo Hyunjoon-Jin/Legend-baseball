@@ -57,6 +57,8 @@ export async function fetchSeason(league: LeagueTeam[], seed: number): Promise<S
     postseason: result.postseason,
     battingLeaders: computeBattingLeaders(result.battingStats, result.playerNames),
     pitchingLeaders: computePitchingLeaders(result.pitchingStats, result.playerNames),
+    battingStats: Object.fromEntries(result.battingStats),
+    pitchingStats: Object.fromEntries(result.pitchingStats),
   });
 }
 

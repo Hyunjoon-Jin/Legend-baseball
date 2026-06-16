@@ -196,6 +196,12 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
 
   const result = simulateKboSeason(leagueTeams, options, rng, hooks);
 
+  // Capture which team each player was on at season end (before offseason moves).
+  const playerTeams = new Map<string, string>();
+  for (const [teamId, roster] of rosters) {
+    for (const player of roster) playerTeams.set(player.playerId, teamId);
+  }
+
   const retiredPlayers = [...state.retiredPlayers];
 
   const teams: TeamFranchiseState[] = state.teams.map((team) => {
@@ -311,5 +317,15 @@ export function playFranchiseSeason(state: FranchiseState, rng: () => number, op
     asiaQuotaFreeAgents: [],
     draftPoolNextYear: [],
     lastSeasonResult: result,
+    seasonStats: [
+      ...(state.seasonStats ?? []),
+      {
+        year: state.year,
+        batting: result.battingStats,
+        pitching: result.pitchingStats,
+        playerNames: result.playerNames,
+        playerTeams,
+      },
+    ],
   };
 }
