@@ -169,7 +169,7 @@ export function runDraft(
   teams: readonly TeamFranchiseState[],
   draftClass: readonly PlayerProfile[],
   lastSeasonResult: KboSeasonResult | undefined,
-  rng: () => number,
+  _rng: () => number,
 ): { teams: TeamFranchiseState[]; picks: DraftPick[]; undrafted: PlayerProfile[] } {
   const rosters = new Map(teams.map((t) => [t.teamId, [...t.roster]]));
   const available = [...draftClass];

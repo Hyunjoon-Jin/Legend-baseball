@@ -36,7 +36,7 @@ function draftOrder(teams: readonly TeamFranchiseState[], lastSeasonResult: KboS
 export function runSecondaryDraft(
   teams: readonly TeamFranchiseState[],
   lastSeasonResult: KboSeasonResult | undefined,
-  rng: () => number,
+  _rng: () => number,
 ): { teams: TeamFranchiseState[]; picks: SecondaryDraftPick[] } {
   const rosters = new Map(teams.map((t) => [t.teamId, [...t.roster]]));
 
