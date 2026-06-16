@@ -13,7 +13,6 @@ import { generateForeignFreeAgentPool, generateAsiaQuotaFreeAgentPool } from '..
 import { generateDraftClass, runDraft } from './offseason/draft.js';
 import { runSecondaryDraft } from './offseason/secondaryDraft.js';
 import { ACTIVE_ROSTER_SIZE, EXPANDED_ROSTER_SIZE, EXPANSION_GAME_INDEX, SECONDARY_DRAFT_CYCLE_YEARS } from '../roster/constants.js';
-import { playerValue } from './trade/evaluation.js';
 import { buildPostTradeRosters } from './trade/execution.js';
 import type { FranchiseState, TeamFranchiseState, TransactionRecord } from './types.js';
 import type { PlayerProfile } from '../types/roster.js';

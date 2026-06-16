@@ -2,7 +2,7 @@ import type { PlayerProfile } from '../../types/roster.js';
 import type { BatterAttributes, PitcherAttributes } from '../../types/player.js';
 import { overallRating } from '../../roster/rating.js';
 import { clamp } from '../../utils/math.js';
-import { PEAK_AGE_BATTER, PEAK_AGE_PITCHER, RETIREMENT_SOFT_AGE, RETIREMENT_HARD_AGE } from '../../roster/constants.js';
+import { PEAK_AGE_BATTER, PEAK_AGE_PITCHER } from '../../roster/constants.js';
 
 /** Numeric 0-100 batter attributes that grow toward `potential` before peak age and decline after. */
 type BatterScalableField =
