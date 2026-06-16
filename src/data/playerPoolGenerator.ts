@@ -190,9 +190,15 @@ function randomPitcherAttributes(id: string, name: string, baseline: number, str
 /** Roster-construction tier, controlling the age/potential distribution for a generated player. */
 type SlotTier = 'core' | 'depth1' | 'depth2';
 
-/** Approximate years of top-level service time implied by a player's age. */
+/**
+ * Approximate KBO 1군 service time for a player of the given age.
+ * KBO pros typically enter at 18-19 (고졸) or 22 (대졸), but mandatory
+ * military service (~2 years) and time in 2군 mean service time accumulates
+ * roughly from age 23 onwards. This matches the real KBO pattern where
+ * most first FA declarations happen at ages 31-34.
+ */
 function serviceTimeFromAge(age: number): number {
-  return clamp(age - 19, 0, 20);
+  return clamp(age - 23, 0, 20);
 }
 
 function buildContract(serviceTimeYears: number, overall: number, rng: () => number) {

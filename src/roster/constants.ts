@@ -33,8 +33,11 @@ export const SECONDARY_DRAFT_CYCLE_YEARS = 3;
 /** Number of players each team protects from the secondary draft. */
 export const SECONDARY_DRAFT_PROTECTED_SIZE = 35;
 
-/** Years of service time required for domestic free agency. */
-export const FA_ELIGIBILITY_YEARS = 8;
+/**
+ * Years of KBO 1군 service time required for domestic free agency.
+ * KBO rule: 고졸 9년, 대졸 8년. Most pros are 고졸, so 9 is the standard threshold.
+ */
+export const FA_ELIGIBILITY_YEARS = 9;
 
 /** Age at which retirement probability starts becoming meaningful. */
 export const RETIREMENT_SOFT_AGE = 36;
