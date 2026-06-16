@@ -135,9 +135,9 @@ function PitcherAttrsPanel({ attrs }: { attrs: PitcherAttributes }) {
 
 // ── season stats row ──────────────────────────────────────────────────────────
 
-function BatterStatsRow({ stats }: { stats: BatterStatLine }) {
+function BatterStatsCells({ stats }: { stats: BatterStatLine }) {
   return (
-    <tr>
+    <>
       <td>{stats.plateAppearances}</td>
       <td>{avg3(stats.avg)}</td>
       <td>{avg3(stats.obp)}</td>
@@ -148,13 +148,13 @@ function BatterStatsRow({ stats }: { stats: BatterStatLine }) {
       <td>{stats.stolenBases}</td>
       <td>{pct(stats.bbRate)}</td>
       <td>{pct(stats.kRate)}</td>
-    </tr>
+    </>
   );
 }
 
-function PitcherStatsRow({ stats }: { stats: PitcherStatLine }) {
+function PitcherStatsCells({ stats }: { stats: PitcherStatLine }) {
   return (
-    <tr>
+    <>
       <td className="pm-highlight">{stats.era.toFixed(2)}</td>
       <td>{stats.whip.toFixed(2)}</td>
       <td>{formatIP(stats.inningsPitched)}</td>
@@ -163,7 +163,7 @@ function PitcherStatsRow({ stats }: { stats: PitcherStatLine }) {
       <td>{stats.kPer9.toFixed(1)}</td>
       <td>{stats.bbPer9.toFixed(1)}</td>
       <td>{pct(stats.swingingStrikeRate)}</td>
-    </tr>
+    </>
   );
 }
 
@@ -217,7 +217,7 @@ function CareerBattingTable({
               <tr key={year}>
                 <td>{year}</td>
                 <td style={{ textAlign: 'left' }}>{teamNameFromId(franchise, teamId)}</td>
-                <BatterStatsRow stats={stats} />
+                <BatterStatsCells stats={stats} />
               </tr>
             ))}
           </tbody>
@@ -266,7 +266,7 @@ function CareerPitchingTable({
               <tr key={year}>
                 <td>{year}</td>
                 <td style={{ textAlign: 'left' }}>{teamNameFromId(franchise, teamId)}</td>
-                <PitcherStatsRow stats={stats} />
+                <PitcherStatsCells stats={stats} />
               </tr>
             ))}
           </tbody>
@@ -376,7 +376,7 @@ export function PlayerModal({ profile, teamName, franchise, overrideSeasonStats,
                       <th>HR</th><th>타점</th><th>도루</th><th>BB%</th><th>K%</th>
                     </tr>
                   </thead>
-                  <tbody><BatterStatsRow stats={lastBatting} /></tbody>
+                  <tbody><tr><BatterStatsCells stats={lastBatting} /></tr></tbody>
                 </table>
               </div>
             )}
@@ -389,7 +389,7 @@ export function PlayerModal({ profile, teamName, franchise, overrideSeasonStats,
                       <th>BB</th><th>K/9</th><th>BB/9</th><th>헛스윙%</th>
                     </tr>
                   </thead>
-                  <tbody><PitcherStatsRow stats={lastPitching} /></tbody>
+                  <tbody><tr><PitcherStatsCells stats={lastPitching} /></tr></tbody>
                 </table>
               </div>
             )}

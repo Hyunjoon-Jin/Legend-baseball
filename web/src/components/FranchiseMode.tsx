@@ -187,6 +187,10 @@ export function FranchiseMode() {
     signing: franchise.transactionLog.filter((r) => r.type === 'signing').length,
   };
 
+  const teamTransactionCount = selectedTeamId
+    ? franchise.transactionLog.filter((r) => r.teamId === selectedTeamId).length
+    : franchise.transactionLog.length;
+
   return (
     <div>
       {/* Franchise header */}
@@ -216,7 +220,7 @@ export function FranchiseMode() {
           [
             { id: 'roster', label: '로스터' },
             { id: 'season', label: `시즌 결과${franchise.lastSeasonResult ? ` (${franchise.year - 1})` : ''}` },
-            { id: 'transactions', label: `트랜잭션 (${franchise.transactionLog.length})` },
+            { id: 'transactions', label: `트랜잭션 (${teamTransactionCount})` },
           ] as { id: SubTab; label: string }[]
         ).map((t) => (
           <button
