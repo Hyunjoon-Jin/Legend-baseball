@@ -93,9 +93,17 @@ export function selectPitchLocation(
   // Effective velocity degrades slightly with fatigue and bad condition.
   const velocity = entry.velocity + conditionAdjust * 0.1 - fatigue * 3;
 
+  // "Lineup protection": when the on-deck batter is weak, the pitcher is
+  // more willing to nibble off the plate against the current batter (a
+  // walk just brings up an easier out); when the on-deck batter is just
+  // as dangerous, walking gains nothing, so the pitcher challenges the
+  // zone instead. Defaults to neutral (50) when not supplied.
+  const onDeckThreat = situation.onDeckThreat ?? 50;
+  const protectionShift = (50 - onDeckThreat) / 50; // -1 (great on-deck) .. +1 (weak on-deck)
+
   // How far from the center of the zone the pitcher is *aiming*.
   // 0 = dead center, up to 1.85 = beyond the zone edge on chase counts.
-  const aimOffset = clamp((0.7 - strikePressure) / 1.2, 0, 1) * 1.85;
+  const aimOffset = clamp((0.7 - strikePressure) / 1.2 + protectionShift * 0.15, 0, 1) * 1.85;
 
   // Random direction for the aim offset (each axis independently).
   const aimRow = 2 + (rng() < 0.5 ? -1 : 1) * aimOffset * (0.5 + rng() * 0.5);

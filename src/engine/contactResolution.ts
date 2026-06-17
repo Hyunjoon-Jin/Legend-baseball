@@ -1,7 +1,7 @@
 import type { BatterAttributes, PitcherAttributes } from '../types/player.js';
 import type { GameSituation } from '../types/situation.js';
 import type { PitchResult } from '../types/outcome.js';
-import { distanceFromCenter, isInStrikeZone } from '../types/zone.js';
+import { distanceFromCenter, isInStrikeZone, zoneModifier } from '../types/zone.js';
 import type { SelectedPitch } from './pitchSelection.js';
 import { clamp, sigmoid } from '../utils/math.js';
 import { PITCH_TYPE_DECEPTION } from '../data/constants.js';
@@ -37,7 +37,12 @@ export function contactProbability(
   const badBallRelief = (batter.badBallHitting / 100) * rawZonePenalty * 0.7;
   const zonePenalty = rawZonePenalty - badBallRelief;
 
-  const diff = contactRating - effectiveStuff - velocityPenalty - zonePenalty;
+  // A batter's personal hot/cold zone nudges contact quality on top of the
+  // generic zone-distance penalty above (e.g. a "cold" low-and-away zone
+  // can still be tough for a batter even on an otherwise hittable pitch).
+  const personalZoneBonus = zoneModifier(batter.zoneProfile, pitch.zone);
+
+  const diff = contactRating - effectiveStuff - velocityPenalty - zonePenalty + personalZoneBonus;
 
   // Offset of +50 calibrates the curve so an average matchup on a
   // middle-middle pitch yields ~90% contact rate (KBO target K% ~19-20%).

@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import { simulateHalfInning } from './inningEngine.js';
 import { samplePitcher, sampleLineupA, sampleBenchA, sampleBullpenA } from '../data/samplePlayers.js';
 import { defaultDefense } from '../types/baserunning.js';
+import type { BatterAttributes } from '../types/player.js';
+
+const dangerousBatter: BatterAttributes = {
+  id: 'ie-danger', name: '강타자', battingSide: 'R', contactVsRight: 95, contactVsLeft: 95, power: 99,
+  plateDiscipline: 90, badBallHitting: 85, speed: 80, stealRating: 70, baserunningAggressiveness: 70,
+  swingType: 'level', pullTendency: 60, clutch: 90,
+};
+
+const weakOnDeck: BatterAttributes = {
+  id: 'ie-weak', name: '약한타자', battingSide: 'R', contactVsRight: 30, contactVsLeft: 30, power: 20,
+  plateDiscipline: 25, badBallHitting: 25, speed: 30, stealRating: 25, baserunningAggressiveness: 25,
+  swingType: 'level', pullTendency: 50, clutch: 30,
+};
 
 function mulberry32(seed: number) {
   return function rng() {
@@ -226,4 +239,33 @@ test('a bench speedster can pinch-run late in a close game, and the substitution
   }
 
   assert.ok(sawPinchRunner, 'expected at least one pinch runner across 200 high-leverage half-innings');
+});
+
+test('a dangerous batter can be intentionally walked ahead of a weak on-deck hitter, with zero pitches thrown', () => {
+  const rng = mulberry32(30);
+  let sawIntentionalWalk = false;
+
+  for (let i = 0; i < 100 && !sawIntentionalWalk; i++) {
+    const result = simulateHalfInning(
+      baseContext({
+        lineup: [dangerousBatter, weakOnDeck],
+        inning: 9,
+        startingScoreDiff: 1,
+        startingRunners: {
+          second: { runnerId: 'r2', speed: 50, stealRating: 50, baserunningAggressiveness: 50 },
+        },
+      }),
+      rng,
+    );
+
+    const ibb = result.plateAppearances.find((pa) => pa.atBat.result === 'intentionalWalk');
+    if (ibb) {
+      sawIntentionalWalk = true;
+      assert.equal(ibb.atBat.pitches.length, 0);
+      assert.equal(ibb.atBat.basesReached, 1);
+      assert.equal(ibb.batter.id, dangerousBatter.id);
+    }
+  }
+
+  assert.ok(sawIntentionalWalk, 'expected at least one intentional walk across 100 high-leverage half-innings');
 });

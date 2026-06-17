@@ -48,6 +48,13 @@ export interface GameSituation {
   ballpark: BallparkFactors;
   /** Fielding team's defensive ratings (catcher arm, infield/outfield range and arm). */
   defense: DefensiveTeamRatings;
+  /**
+   * Threat level (1-99) of the on-deck batter, used for "lineup protection":
+   * pitchers nibble more against the current batter when the on-deck hitter
+   * is weak, and challenge the zone more when he's equally dangerous.
+   * Defaults to 50 (neutral) when omitted.
+   */
+  onDeckThreat?: number;
 }
 
 export const defaultWeather: WeatherConditions = {

@@ -1,9 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { simulateAtBat } from './matchupEngine.js';
+import { resolveIntentionalWalk, simulateAtBat } from './matchupEngine.js';
 import { sampleBatter, samplePitcher, sampleSituation, sampleSituationWithRunners } from '../data/samplePlayers.js';
 import { OUTCOME_CATEGORY } from '../types/outcome.js';
 import { isInStrikeZone } from '../types/zone.js';
+import type { RunnerOnBase } from '../types/baserunning.js';
+
+const runnerOn = (id: string): RunnerOnBase => ({ runnerId: id, speed: 50, stealRating: 50, baserunningAggressiveness: 50 });
 
 function mulberry32(seed: number) {
   return function rng() {
@@ -149,4 +152,36 @@ test('caught stealing on the bases is reflected in baseRunningEvents', () => {
     }
   }
   assert.ok(sawSteal, 'expected at least one stolen base attempt across 300 at-bats with runners on base');
+});
+
+// ---------------------------------------------------------------------------
+// resolveIntentionalWalk
+// ---------------------------------------------------------------------------
+
+test('resolveIntentionalWalk sends the batter to first with zero pitches thrown', () => {
+  const result = resolveIntentionalWalk(sampleBatter, {}, sampleSituation, mulberry32(1));
+  assert.equal(result.pitches.length, 0);
+  assert.equal(result.result, 'intentionalWalk');
+  assert.equal(result.category, 'walk');
+  assert.equal(result.basesReached, 1);
+  assert.equal(result.outsRecorded, 0);
+  assert.equal(result.runsScored, 0);
+  assert.equal(result.finalRunners.first?.runnerId, sampleBatter.id);
+});
+
+test('resolveIntentionalWalk force-advances existing runners exactly like a regular walk', () => {
+  const runners = { first: runnerOn('r1'), second: runnerOn('r2'), third: runnerOn('r3') };
+  const result = resolveIntentionalWalk(sampleBatter, runners, sampleSituation, mulberry32(2));
+  assert.equal(result.runsScored, 1);
+  assert.equal(result.finalRunners.first?.runnerId, sampleBatter.id);
+  assert.equal(result.finalRunners.second?.runnerId, 'r1');
+  assert.equal(result.finalRunners.third?.runnerId, 'r2');
+});
+
+test('resolveIntentionalWalk does not force a runner on second when first base is empty', () => {
+  const runners = { second: runnerOn('r2') };
+  const result = resolveIntentionalWalk(sampleBatter, runners, sampleSituation, mulberry32(3));
+  assert.equal(result.finalRunners.first?.runnerId, sampleBatter.id);
+  assert.equal(result.finalRunners.second?.runnerId, 'r2');
+  assert.equal(result.runsScored, 0);
 });

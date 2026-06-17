@@ -6,6 +6,8 @@ import {
   selectReliever,
   decidePinchHitter,
   decidePinchRunner,
+  batterThreatLevel,
+  decideIntentionalWalk,
 } from './managerStrategy.js';
 import { sampleSituation, samplePitcher, sampleBullpenA, sampleBenchA, sampleLineupA } from '../data/samplePlayers.js';
 import type { GameSituation } from '../types/situation.js';
@@ -219,4 +221,85 @@ test('decidePinchRunner sends up the speedster in high-leverage spots with a lar
     }
   }
   assert.ok(pinchRuns > 0, 'expected at least one pinch runner across 200 high-leverage attempts');
+});
+
+// ---------------------------------------------------------------------------
+// batterThreatLevel
+// ---------------------------------------------------------------------------
+
+const dangerousBatter: BatterAttributes = {
+  id: 'danger1', name: '강타자', battingSide: 'R', contactVsRight: 95, contactVsLeft: 95, power: 99,
+  plateDiscipline: 90, badBallHitting: 85, speed: 80, stealRating: 70, baserunningAggressiveness: 70,
+  swingType: 'level', pullTendency: 60, clutch: 90,
+};
+
+const weakOnDeck: BatterAttributes = {
+  id: 'weak1', name: '약한타자', battingSide: 'R', contactVsRight: 30, contactVsLeft: 30, power: 20,
+  plateDiscipline: 25, badBallHitting: 25, speed: 30, stealRating: 25, baserunningAggressiveness: 25,
+  swingType: 'level', pullTendency: 50, clutch: 30,
+};
+
+const comparableOnDeck: BatterAttributes = {
+  id: 'strong1', name: '강타자2', battingSide: 'R', contactVsRight: 85, contactVsLeft: 85, power: 85,
+  plateDiscipline: 80, badBallHitting: 75, speed: 70, stealRating: 65, baserunningAggressiveness: 65,
+  swingType: 'level', pullTendency: 55, clutch: 80,
+};
+
+test('batterThreatLevel rates a five-tool dangerous batter higher than a weak one', () => {
+  assert.ok(batterThreatLevel(dangerousBatter) > batterThreatLevel(weakOnDeck));
+});
+
+test('batterThreatLevel stays within 1-99 across a full sample lineup', () => {
+  for (const batter of [...sampleLineupA, ...sampleBenchA, dangerousBatter, weakOnDeck]) {
+    const threat = batterThreatLevel(batter);
+    assert.ok(threat >= 1 && threat <= 99, `threat ${threat} out of range for ${batter.id}`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// decideIntentionalWalk
+// ---------------------------------------------------------------------------
+
+test('decideIntentionalWalk does nothing when first base is occupied', () => {
+  const rng = mulberry32(13);
+  const sit = situation({ inning: 9, scoreDiff: 1, runners: { first: runnerOn(50), second: runnerOn(50) } });
+  for (let i = 0; i < 20; i++) {
+    assert.equal(decideIntentionalWalk(dangerousBatter, weakOnDeck, sit, rng), false);
+  }
+});
+
+test('decideIntentionalWalk does nothing without a runner in scoring position', () => {
+  const rng = mulberry32(14);
+  const sit = situation({ inning: 9, scoreDiff: 1, runners: {} });
+  for (let i = 0; i < 20; i++) {
+    assert.equal(decideIntentionalWalk(dangerousBatter, weakOnDeck, sit, rng), false);
+  }
+});
+
+test('decideIntentionalWalk does nothing when leverage is too low', () => {
+  const rng = mulberry32(15);
+  const sit = situation({ inning: 1, scoreDiff: 10, runners: { second: runnerOn(50) } });
+  for (let i = 0; i < 20; i++) {
+    assert.equal(decideIntentionalWalk(dangerousBatter, weakOnDeck, sit, rng), false);
+  }
+});
+
+test('decideIntentionalWalk does nothing when the on-deck hitter is nearly as dangerous', () => {
+  const rng = mulberry32(16);
+  const sit = situation({ inning: 9, scoreDiff: 1, runners: { second: runnerOn(50) } });
+  for (let i = 0; i < 20; i++) {
+    assert.equal(decideIntentionalWalk(dangerousBatter, comparableOnDeck, sit, rng), false);
+  }
+});
+
+test('decideIntentionalWalk walks the dangerous batter in high-leverage RISP spots with a weak on-deck hitter', () => {
+  const rng = mulberry32(17);
+  const sit = situation({ inning: 9, scoreDiff: 1, runners: { second: runnerOn(50) } });
+
+  let walks = 0;
+  const trials = 200;
+  for (let i = 0; i < trials; i++) {
+    if (decideIntentionalWalk(dangerousBatter, weakOnDeck, sit, rng)) walks++;
+  }
+  assert.ok(walks > trials * 0.2, `expected a meaningful number of intentional walks, got ${walks}/${trials}`);
 });

@@ -54,6 +54,21 @@ function buildResult(
 }
 
 /**
+ * Resolves an intentional walk decided before any pitch is thrown (modern
+ * rule: no pitches required). Advances baserunners exactly like a regular
+ * walk via `advanceRunnersOnPlay`'s shared `'intentionalWalk'` case.
+ */
+export function resolveIntentionalWalk(
+  batter: BatterAttributes,
+  runners: BaseRunners,
+  situation: GameSituation,
+  rng: () => number = Math.random,
+): AtBatResult {
+  const br = advanceRunnersOnPlay('intentionalWalk', undefined, runners, batterToRunner(batter), situation, rng);
+  return buildResult([], 'intentionalWalk', 1, br.runsScored, br.finalRunners, br.events, BATTER_OUTS.intentionalWalk);
+}
+
+/**
  * Simulates a full plate appearance pitch-by-pitch, returning a fully
  * detailed result: every pitch thrown, stolen-base/pickoff attempts on
  * the bases, the final outcome classification, the batted-ball profile

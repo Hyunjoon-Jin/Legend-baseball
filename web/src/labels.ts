@@ -1,4 +1,4 @@
-import type { PlateAppearanceResult, PostseasonRoundName, SubstitutionType } from './api/types';
+import type { PitchResult, PitchType, PlateAppearanceResult, PostseasonRoundName, SubstitutionType } from './api/types';
 
 export const RESULT_LABEL_KO: Record<PlateAppearanceResult, string> = {
   strikeoutSwinging: '삼진(스윙)',
@@ -44,4 +44,26 @@ export const WIND_DIRECTION_LABEL_KO: Record<string, string> = {
   out: '바람 나감 (홈런 유리)',
   in: '바람 불어옴 (홈런 불리)',
   crosswind: '횡풍',
+};
+
+export const PITCH_TYPE_LABEL_KO: Record<PitchType, string> = {
+  fourSeam: '포심',
+  twoSeam: '투심',
+  sinker: '싱커',
+  cutter: '커터',
+  slider: '슬라이더',
+  curve: '커브',
+  changeup: '체인지업',
+  splitter: '스플리터',
+  knuckleCurve: '너클커브',
+};
+
+export const PITCH_RESULT_LABEL_KO: Record<PitchResult, string> = {
+  calledStrike: '루킹 스트라이크',
+  swingingStrike: '스윙 스트라이크',
+  foulBall: '파울',
+  foulTip: '파울 팁',
+  ball: '볼',
+  hitByPitch: '몸에 맞는 볼',
+  inPlay: '인플레이',
 };

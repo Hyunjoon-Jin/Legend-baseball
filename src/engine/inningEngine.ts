@@ -4,8 +4,8 @@ import { defaultBallpark, defaultWeather } from '../types/situation.js';
 import type { BaseRunners, DefensiveTeamRatings } from '../types/baserunning.js';
 import type { HalfInningResult, InningPlateAppearance, Lineup, SubstitutionEvent } from '../types/game.js';
 import { OUTCOME_CATEGORY } from '../types/outcome.js';
-import { batterToRunner, simulateAtBat } from './matchupEngine.js';
-import { decidePinchHitter, decidePinchRunner, decidePitchingChange, selectReliever } from './managerStrategy.js';
+import { batterToRunner, resolveIntentionalWalk, simulateAtBat } from './matchupEngine.js';
+import { batterThreatLevel, decideIntentionalWalk, decidePinchHitter, decidePinchRunner, decidePitchingChange, selectReliever } from './managerStrategy.js';
 
 /** Safety guard against pathological loops (e.g. endless walks/errors). */
 const MAX_PLATE_APPEARANCES_PER_HALF_INNING = 60;
@@ -109,6 +109,7 @@ export function simulateHalfInning(ctx: HalfInningContext, rng: () => number = M
 
   for (let i = 0; i < MAX_PLATE_APPEARANCES_PER_HALF_INNING && outs < 3; i++) {
     const lineupIndex = batterIndex % lineup.length;
+    const onDeckBatter = lineup[(lineupIndex + 1) % lineup.length];
 
     const lookahead: GameSituation = {
       inning: ctx.inning,
@@ -124,6 +125,7 @@ export function simulateHalfInning(ctx: HalfInningContext, rng: () => number = M
       weather,
       ballpark,
       defense: ctx.defense,
+      onDeckThreat: batterThreatLevel(onDeckBatter),
     };
 
     // Pinch hitter, decided before the at-bat begins.
@@ -163,7 +165,9 @@ export function simulateHalfInning(ctx: HalfInningContext, rng: () => number = M
     const batter = lineup[lineupIndex];
     const situation: GameSituation = { ...lookahead, pitcherPitchCount };
 
-    const atBat = simulateAtBat(pitcher, batter, situation, rng);
+    const atBat = decideIntentionalWalk(batter, onDeckBatter, situation, rng)
+      ? resolveIntentionalWalk(batter, runners, situation, rng)
+      : simulateAtBat(pitcher, batter, situation, rng);
 
     pitcherPitchCount += atBat.pitches.length;
     pitchesThisHalfInning += atBat.pitches.length;

@@ -3,6 +3,7 @@ import type { GameSituation } from '../types/situation.js';
 import type { BattedBallDirection, BattedBallProfile, BattedBallType } from '../types/outcome.js';
 import { clamp, sampleNormal } from '../utils/math.js';
 import type { SelectedPitch } from './pitchSelection.js';
+import { zoneModifier } from '../types/zone.js';
 import {
   BASE_FLYBALL_DISTANCE_AT_PEAK,
   BATTED_BALL_DIRECTIONS,
@@ -19,13 +20,15 @@ function classifyBattedBallType(launchAngle: number): BattedBallType {
 
 /**
  * Exit velocity in km/h, driven by batter power vs. pitcher stuff with
- * natural contact-quality variance.
+ * natural contact-quality variance. A batter's personal hot/cold zone
+ * also nudges contact quality up or down on pitches in that zone.
  */
-function generateExitVelocity(batter: BatterAttributes, pitcher: PitcherAttributes, rng: () => number): number {
+function generateExitVelocity(batter: BatterAttributes, pitcher: PitcherAttributes, pitch: SelectedPitch, rng: () => number): number {
   const base = 110 + (batter.power - 50) * 0.6;
   const pitcherSuppression = (pitcher.stuff - 50) * 0.15;
+  const zoneBonus = zoneModifier(batter.zoneProfile, pitch.zone) * 0.6;
   const noise = sampleNormal(0, 12, rng);
-  return clamp(base - pitcherSuppression + noise, 40, 195);
+  return clamp(base - pitcherSuppression + zoneBonus + noise, 40, 195);
 }
 
 /**
@@ -110,7 +113,7 @@ export function generateBattedBall(
   situation: GameSituation,
   rng: () => number = Math.random,
 ): BattedBallProfile {
-  const exitVelocity = generateExitVelocity(batter, pitcher, rng);
+  const exitVelocity = generateExitVelocity(batter, pitcher, pitch, rng);
   const launchAngle = generateLaunchAngle(batter, pitch, rng);
   const direction = generateDirection(batter, pitcher, pitch, rng);
   const type = classifyBattedBallType(launchAngle);

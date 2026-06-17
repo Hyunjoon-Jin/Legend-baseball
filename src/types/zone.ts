@@ -48,3 +48,20 @@ export const ALL_ZONES: ZoneLocation[] = (() => {
   }
   return zones;
 })();
+
+/**
+ * Flat 0-24 index for a zone location (row-major: `row * 5 + col`), used to
+ * index into a per-zone array like `BatterAttributes.zoneProfile`.
+ */
+export function zoneIndex(zone: ZoneLocation): number {
+  return zone.row * 5 + zone.col;
+}
+
+/**
+ * Looks up a batter's hot/cold modifier for a given zone from their
+ * `zoneProfile` (25 entries indexed by `zoneIndex`, roughly -10..+10).
+ * A missing profile or out-of-range entry defaults to 0 (neutral).
+ */
+export function zoneModifier(profile: readonly number[] | undefined, zone: ZoneLocation): number {
+  return profile?.[zoneIndex(zone)] ?? 0;
+}

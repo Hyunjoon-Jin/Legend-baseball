@@ -11,6 +11,7 @@ import {
   sampleBullpenB,
 } from './samplePlayers.js';
 import { PITCH_TYPE_GROUNDBALL_PULL } from './constants.js';
+import { ALL_ZONES } from '../types/zone.js';
 import {
   generateKoreanName,
   generateForeignName,
@@ -126,12 +127,40 @@ function jitter(rng: () => number, spread: number): number {
   return (rng() * 2 - 1) * spread;
 }
 
+/** Peak magnitude (in zoneProfile units) at the generated hot/cold spots. */
+const ZONE_PROFILE_PEAK = 10;
+
+/** How quickly the hot/cold effect fades with distance (in grid cells) from its peak. */
+const ZONE_PROFILE_FALLOFF = 4;
+
+/**
+ * Generates a 25-entry hot/cold zone profile for a batter: a smooth 2D
+ * gradient with one randomly-placed "hot" peak and one randomly-placed
+ * "cold" peak, rather than independent per-cell noise, so a batter's
+ * strengths/weaknesses form a contiguous region of the zone like a real
+ * hitter's "happy zone" instead of a checkerboard of unrelated cells.
+ */
+function generateZoneProfile(rng: () => number): number[] {
+  const hotRow = rng() * 4;
+  const hotCol = rng() * 4;
+  const coldRow = rng() * 4;
+  const coldCol = rng() * 4;
+
+  return ALL_ZONES.map((zone) => {
+    const hotDist = Math.hypot(zone.row - hotRow, zone.col - hotCol);
+    const coldDist = Math.hypot(zone.row - coldRow, zone.col - coldCol);
+    const hot = Math.max(0, ZONE_PROFILE_PEAK - hotDist * ZONE_PROFILE_FALLOFF);
+    const cold = Math.max(0, ZONE_PROFILE_PEAK - coldDist * ZONE_PROFILE_FALLOFF);
+    return Math.round(hot - cold);
+  });
+}
+
 function scaleBatterAttributes(template: BatterAttributes, id: string, name: string, strength: number, rng: () => number): BatterAttributes {
   const overrides = {} as Record<BatterScalableField, number>;
   for (const field of BATTER_SCALABLE_FIELDS) {
     overrides[field] = clampRating(template[field] * strength + jitter(rng, 4));
   }
-  return { ...template, id, name, ...overrides };
+  return { ...template, id, name, ...overrides, zoneProfile: generateZoneProfile(rng) };
 }
 
 function scalePitcherAttributes(template: PitcherAttributes, id: string, name: string, strength: number, rng: () => number, role?: PitcherRole): PitcherAttributes {
@@ -175,7 +204,7 @@ function randomBatterAttributes(id: string, name: string, baseline: number, stre
   }
   const battingSide = (['L', 'R', 'S'] as const)[Math.floor(rng() * 3)];
   const swingType = (['upper', 'level', 'down'] as const)[Math.floor(rng() * 3)];
-  return { id, name, battingSide, swingType, ...overrides };
+  return { id, name, battingSide, swingType, ...overrides, zoneProfile: generateZoneProfile(rng) };
 }
 
 function randomPitcherAttributes(id: string, name: string, baseline: number, strength: number, rng: () => number, role?: PitcherRole): PitcherAttributes {

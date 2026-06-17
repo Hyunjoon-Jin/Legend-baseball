@@ -99,3 +99,21 @@ test('batter attribute ratings stay within 1-99 even with team-strength scaling'
     }
   }
 });
+
+test('every batter has a 25-entry zoneProfile with values bounded within -10..10', () => {
+  const pool = generateTeamPlayerPool(6, 1.0, mulberry32(9));
+  for (const p of pool.filter((x) => x.kind === 'batter')) {
+    const attrs = p.attributes as BatterAttributes;
+    assert.equal(attrs.zoneProfile?.length, 25, `missing/malformed zoneProfile for ${p.playerId}`);
+    for (const value of attrs.zoneProfile!) {
+      assert.ok(value >= -10 && value <= 10, `zoneProfile value ${value} out of range for ${p.playerId}`);
+    }
+  }
+});
+
+test('zoneProfiles vary across batters rather than being a single shared default', () => {
+  const pool = generateTeamPlayerPool(7, 1.0, mulberry32(10));
+  const batters = pool.filter((x) => x.kind === 'batter');
+  const serialized = new Set(batters.map((p) => JSON.stringify((p.attributes as BatterAttributes).zoneProfile)));
+  assert.ok(serialized.size > 1, 'expected distinct zoneProfiles across the generated batter pool');
+});

@@ -3,8 +3,10 @@
 // directly in the browser (see ./client.ts), so the frontend depends on the
 // engine's TS sources directly instead of duplicating these shapes.
 
-import type { GameResult, HalfInningResult, SubstitutionType } from '../../../src/types/game.js';
-import type { PlateAppearanceResult } from '../../../src/types/outcome.js';
+import type { GameResult, HalfInningResult, InningPlateAppearance, SubstitutionType } from '../../../src/types/game.js';
+import type { PitchEvent, PitchResult, PlateAppearanceResult } from '../../../src/types/outcome.js';
+import type { PitchType } from '../../../src/types/player.js';
+import type { ZoneLocation } from '../../../src/types/zone.js';
 import type { LeagueTeam, PostseasonResult, PostseasonRoundName, StandingsRow } from '../../../src/types/season.js';
 import type { WeatherConditions } from '../../../src/types/situation.js';
 import type { BattingLeaders, LeaderEntry, PitchingLeaders } from '../../../src/season/leaderboards.js';
@@ -13,7 +15,12 @@ import type { BatterStatLine, PitcherStatLine } from '../../../src/stats/types.j
 export type {
   GameResult,
   HalfInningResult,
+  InningPlateAppearance,
   SubstitutionType,
+  PitchEvent,
+  PitchResult,
+  PitchType,
+  ZoneLocation,
   PlateAppearanceResult,
   PostseasonRoundName,
   WeatherConditions,

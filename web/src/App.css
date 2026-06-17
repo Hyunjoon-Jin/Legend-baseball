@@ -682,3 +682,81 @@ button:disabled {
   .pm-name { font-size: 22px; }
   .pm-attrs-grid { grid-template-columns: 1fr; }
 }
+
+/* ── pitch stats panel ───────────────────────────────── */
+.pitch-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.pitch-stats-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.pitch-stats-summary {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.pitch-stats-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.pitch-type-table {
+  flex: 1;
+  min-width: 280px;
+}
+
+/* ── plate-appearance detail ─────────────────────────── */
+.pa-detail {
+  margin-bottom: 4px;
+}
+
+.pa-detail summary {
+  cursor: pointer;
+}
+
+.pa-detail-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 8px 0 4px;
+}
+
+.zone-legend {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.zone-legend li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zone-legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.pitch-sequence-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}

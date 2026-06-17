@@ -81,4 +81,11 @@ export interface BatterAttributes {
   pullTendency: number;
   /** Performance stability under pressure (clutch), 0-100. */
   clutch: number;
+  /**
+   * Optional per-zone hot/cold modifier: 25 entries indexed by `zoneIndex`
+   * (see `types/zone.ts`), each roughly -10..+10. Positive = batter makes
+   * better contact and hits the ball harder on pitches in that zone;
+   * negative = worse. Undefined = perfectly neutral across the zone.
+   */
+  zoneProfile?: number[];
 }

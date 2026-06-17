@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { fetchGame, randomSeed } from '../api/client';
-import type { GameResult, LeagueResponse, WeatherConditions } from '../api/types';
+import type { GameResult, InningPlateAppearance, LeagueResponse, WeatherConditions } from '../api/types';
 import { buildBattingBoxScore, buildPitchingBoxScore, formatAvg, type BattingBoxScoreRow, type PitchingBoxScoreRow } from '../boxscore';
-import { RESULT_LABEL_KO, SUBSTITUTION_LABEL_KO, WIND_DIRECTION_LABEL_KO } from '../labels';
+import { buildPitcherPitchStats } from '../pitchStats';
+import { PITCH_RESULT_LABEL_KO, PITCH_TYPE_LABEL_KO, RESULT_LABEL_KO, SUBSTITUTION_LABEL_KO, WIND_DIRECTION_LABEL_KO } from '../labels';
+import { StrikeZoneGrid, StrikeZoneLegend } from './StrikeZoneGrid';
+import { PitchStatsPanel } from './PitchStatsPanel';
 
 interface Props {
   league: LeagueResponse;
@@ -141,6 +144,8 @@ function GameResultView({ result, homeName, awayName }: { result: GameResult; ho
   const homeBatting = buildBattingBoxScore(result.halfInnings, 'bottom');
   const homePitching = buildPitchingBoxScore(result.halfInnings, 'top');
   const awayPitching = buildPitchingBoxScore(result.halfInnings, 'bottom');
+  const homePitchStats = buildPitcherPitchStats(result.halfInnings, 'top');
+  const awayPitchStats = buildPitcherPitchStats(result.halfInnings, 'bottom');
 
   return (
     <div className="result">
@@ -183,6 +188,11 @@ function GameResultView({ result, homeName, awayName }: { result: GameResult; ho
         <PitchingBoxScoreTable title={`${awayName} 투구`} rows={awayPitching} />
       </div>
 
+      <div className="pitch-stats-grid">
+        <PitchStatsPanel title={`${homeName} 투구 분석`} stats={homePitchStats} />
+        <PitchStatsPanel title={`${awayName} 투구 분석`} stats={awayPitchStats} />
+      </div>
+
       {result.substitutions.length > 0 && (
         <div className="substitutions">
           <h4>선수 교체</h4>
@@ -208,8 +218,7 @@ function GameResultView({ result, homeName, awayName }: { result: GameResult; ho
             <ul>
               {half.plateAppearances.map((pa, j) => (
                 <li key={j}>
-                  {pa.batter.name} vs {pa.pitcher.name}: {RESULT_LABEL_KO[pa.atBat.result]}
-                  {pa.atBat.runsScored > 0 ? ` (${pa.atBat.runsScored}점 득점)` : ''}
+                  <PlateAppearanceDetail pa={pa} />
                 </li>
               ))}
             </ul>
@@ -217,6 +226,37 @@ function GameResultView({ result, homeName, awayName }: { result: GameResult; ho
         ))}
       </div>
     </div>
+  );
+}
+
+function PlateAppearanceDetail({ pa }: { pa: InningPlateAppearance }) {
+  const pitches = pa.atBat.pitches;
+  const summaryText = `${pa.batter.name} vs ${pa.pitcher.name}: ${RESULT_LABEL_KO[pa.atBat.result]}${
+    pa.atBat.runsScored > 0 ? ` (${pa.atBat.runsScored}점 득점)` : ''
+  }`;
+
+  if (pitches.length === 0) {
+    return <span>{summaryText}</span>;
+  }
+
+  return (
+    <details className="pa-detail">
+      <summary>{summaryText}</summary>
+      <div className="pa-detail-body">
+        <StrikeZoneGrid pitches={pitches} size={160} />
+        <div>
+          <StrikeZoneLegend results={pitches.map((p) => p.result)} />
+          <ol className="pitch-sequence-list">
+            {pitches.map((p) => (
+              <li key={p.pitchNumber}>
+                {p.countBefore.balls}-{p.countBefore.strikes} {PITCH_TYPE_LABEL_KO[p.pitchType]} {p.velocity.toFixed(0)}km/h -{' '}
+                {PITCH_RESULT_LABEL_KO[p.result]}
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </details>
   );
 }
 

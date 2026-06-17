@@ -117,6 +117,54 @@ export function decidePinchHitter(
 }
 
 /**
+ * Engine-local estimate (1-99) of how dangerous a batter is, used to decide
+ * intentional walks and lineup-protection pitch selection. Mirrors
+ * `roster/rating.ts`'s `batterOverallRating` formula but is kept
+ * self-contained here since `engine/` does not depend on the `roster/`
+ * layer.
+ */
+export function batterThreatLevel(batter: BatterAttributes): number {
+  const contact = (batter.contactVsRight + batter.contactVsLeft) / 2;
+  const value =
+    contact * 0.3 +
+    batter.power * 0.25 +
+    batter.plateDiscipline * 0.15 +
+    batter.speed * 0.1 +
+    batter.badBallHitting * 0.1 +
+    batter.clutch * 0.1;
+  return clamp(Math.round(value), 1, 99);
+}
+
+/**
+ * Decides whether the defense intentionally walks the batter to instead
+ * face the on-deck hitter - classic "lineup protection". Only considered
+ * with first base open and a runner in scoring position (the standard
+ * percentage-baseball precondition), and only worth it when the batter at
+ * the plate is a real threat and the on-deck hitter is enough of a
+ * downgrade to make the trade worthwhile. Scaled by leverage so it stays a
+ * late/close-game tactic rather than a routine one.
+ */
+export function decideIntentionalWalk(
+  batter: BatterAttributes,
+  onDeck: BatterAttributes | undefined,
+  situation: GameSituation,
+  rng: () => number = Math.random,
+): boolean {
+  if (situation.runners.first || !(situation.runners.second || situation.runners.third)) return false;
+  if (!onDeck) return false;
+
+  const leverage = calculateLeverage(situation);
+  if (leverage < 0.5) return false;
+
+  const batterThreat = batterThreatLevel(batter);
+  const threatGap = batterThreat - batterThreatLevel(onDeck);
+  if (batterThreat < 70 || threatGap < 15) return false;
+
+  const prob = clamp((threatGap - 15) / 40, 0, 1) * leverage * 0.5;
+  return rng() < prob;
+}
+
+/**
  * Decides whether to replace a baserunner with a faster pinch runner.
  * Only worth burning a bench player late in a close game, and only when
  * the speed upgrade is significant.
