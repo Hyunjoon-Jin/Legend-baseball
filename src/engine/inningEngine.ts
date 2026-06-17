@@ -63,10 +63,12 @@ export interface HalfInningContext {
  * half-innings.
  *
  * Before each plate appearance, the defense may bring in a relief pitcher
- * (based on fatigue and leverage) and the offense may send up a pinch
- * hitter (based on platoon advantage and leverage). Immediately after a
- * batter reaches base, the offense may replace him with a faster pinch
- * runner. Any substitution permanently replaces that player in the lineup
+ * (based on fatigue, leverage, or a disaster inning where the current
+ * pitcher has already been shelled for several runs) and the offense may
+ * send up a pinch hitter (based on platoon advantage and leverage).
+ * Immediately after a batter reaches base, the offense may replace him
+ * with a faster pinch runner. Any substitution permanently replaces that
+ * player in the lineup
  * /pitching staff for the rest of the game - see `SubstitutionEvent`s in
  * the returned result.
  *
@@ -87,6 +89,7 @@ export function simulateHalfInning(ctx: HalfInningContext, rng: () => number = M
   let pitcher = ctx.pitcher;
   let pitcherPitchCount = ctx.pitcherPitchCountStart ?? 0;
   let bullpen = [...(ctx.bullpen ?? [])];
+  let runsAllowedThisInningByPitcher = 0;
 
   let batterIndex = ctx.startingBatterIndex ?? 0;
   let outs: number = ctx.startingOuts ?? 0;
@@ -126,6 +129,7 @@ export function simulateHalfInning(ctx: HalfInningContext, rng: () => number = M
       ballpark,
       defense: ctx.defense,
       onDeckThreat: batterThreatLevel(onDeckBatter),
+      runsAllowedThisInning: runsAllowedThisInningByPitcher,
     };
 
     // Pinch hitter, decided before the at-bat begins.
@@ -159,6 +163,7 @@ export function simulateHalfInning(ctx: HalfInningContext, rng: () => number = M
         bullpen = bullpen.filter((p) => p.id !== reliever.id);
         pitcher = reliever;
         pitcherPitchCount = 0;
+        runsAllowedThisInningByPitcher = 0;
       }
     }
 
@@ -175,6 +180,7 @@ export function simulateHalfInning(ctx: HalfInningContext, rng: () => number = M
     runners = atBat.finalRunners;
     runsScored += atBat.runsScored;
     scoreDiff += atBat.runsScored;
+    runsAllowedThisInningByPitcher += atBat.runsScored;
 
     const category = OUTCOME_CATEGORY[atBat.result];
     if (category === 'hit') hits++;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { simulateHalfInning } from './inningEngine.js';
 import { samplePitcher, sampleLineupA, sampleBenchA, sampleBullpenA } from '../data/samplePlayers.js';
 import { defaultDefense } from '../types/baserunning.js';
-import type { BatterAttributes } from '../types/player.js';
+import type { BatterAttributes, PitcherAttributes } from '../types/player.js';
 
 const dangerousBatter: BatterAttributes = {
   id: 'ie-danger', name: '강타자', battingSide: 'R', contactVsRight: 95, contactVsLeft: 95, power: 99,
@@ -183,6 +183,41 @@ test('an exhausted starter is replaced by a reliever, and every plate appearance
   for (const pa of result.plateAppearances) {
     assert.equal(pa.pitcher.id, change.incoming.id);
   }
+});
+
+test('a starter getting shelled for a big inning is pulled mid-inning instead of absorbing the whole rally', () => {
+  const rng = mulberry32(40);
+
+  // Heavily overmatched on both stuff and command, facing a lineup of
+  // five-tool sluggers - engineered to produce frequent multi-run innings.
+  const overmatchedPitcher: PitcherAttributes = {
+    ...samplePitcher,
+    control: 15,
+    stuff: 15,
+    repertoire: samplePitcher.repertoire.map((entry) => ({ ...entry, control: 15 })),
+  };
+  const lineupOfSluggers = Array.from({ length: 9 }, (_, i) => ({ ...dangerousBatter, id: `slugger-${i}` }));
+
+  let disasterInnings = 0;
+  let disasterInningsWithChange = 0;
+
+  for (let i = 0; i < 300; i++) {
+    const result = simulateHalfInning(
+      baseContext({ pitcher: overmatchedPitcher, bullpen: sampleBullpenA, lineup: lineupOfSluggers }),
+      rng,
+    );
+
+    if (result.runsScored >= 6) {
+      disasterInnings++;
+      if (result.substitutions.some((s) => s.type === 'pitchingChange')) disasterInningsWithChange++;
+    }
+  }
+
+  assert.ok(disasterInnings >= 20, `expected several 6+ run innings against an overmatched pitcher, got ${disasterInnings}/300`);
+  assert.ok(
+    disasterInningsWithChange > disasterInnings * 0.7,
+    `expected most 6+ run innings to include a pitching change, got ${disasterInningsWithChange}/${disasterInnings}`,
+  );
 });
 
 test('a bench bat with a platoon edge can pinch-hit late in a close game, and the substitution is recorded', () => {

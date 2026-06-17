@@ -24,7 +24,10 @@ export function calculateLeverage(situation: GameSituation): number {
  * batter. A starter who is gassed (high fatigue) is pulled more readily
  * in high-leverage spots ("quick hook"), while a fresh arm is left in
  * even late in lopsided games. A non-closer protecting a save situation
- * in the 9th or later is also likely to be lifted for a fresh closer.
+ * in the 9th or later is also likely to be lifted for a fresh closer. A
+ * pitcher getting shelled for several runs within the current inning is
+ * pulled to stop the bleeding regardless of pitch count or fatigue - the
+ * classic "he doesn't have it today" hook.
  */
 export function decidePitchingChange(
   pitcher: PitcherAttributes,
@@ -37,6 +40,16 @@ export function decidePitchingChange(
 
   // Hard cap: an exhausted starter comes out essentially every time.
   if (pitchCount >= 120) return true;
+
+  // Disaster inning: once a pitcher has allowed 4+ runs in this inning
+  // alone, the odds of being pulled climb sharply with every additional
+  // run, reaching near-certainty by 7-8 - a starter doesn't get to give
+  // up 8 in a single frame without the bullpen phone ringing first.
+  const runsAllowedThisInning = situation.runsAllowedThisInning ?? 0;
+  if (runsAllowedThisInning >= 4) {
+    const disasterProb = clamp(0.4 + (runsAllowedThisInning - 4) * 0.2, 0.4, 0.95);
+    if (rng() < disasterProb) return true;
+  }
 
   const leverage = calculateLeverage(situation);
 

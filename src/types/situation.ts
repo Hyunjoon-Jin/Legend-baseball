@@ -55,6 +55,13 @@ export interface GameSituation {
    * Defaults to 50 (neutral) when omitted.
    */
   onDeckThreat?: number;
+  /**
+   * Runs the current pitcher has allowed so far in this half-inning, reset
+   * to 0 whenever a new pitcher enters mid-inning. Used to trigger a
+   * "disaster start" pitching change when a pitcher is getting shelled,
+   * independent of his pitch count/fatigue. Defaults to 0 when omitted.
+   */
+  runsAllowedThisInning?: number;
 }
 
 export const defaultWeather: WeatherConditions = {

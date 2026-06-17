@@ -91,6 +91,55 @@ test('decidePitchingChange frequently lifts a non-closer for a fresh arm in a 9t
   assert.ok(changes > trials * 0.4, `expected >40% quick hooks, got ${changes}/${trials}`);
 });
 
+test('decidePitchingChange leaves a fresh starter in despite 3 runs allowed this inning (below the disaster threshold)', () => {
+  const rng = mulberry32(40);
+  const sit = situation({ inning: 1, scoreDiff: 0, runsAllowedThisInning: 3 });
+  for (let i = 0; i < 20; i++) {
+    assert.equal(decidePitchingChange(samplePitcher, 20, true, sit, rng), false);
+  }
+});
+
+test('decidePitchingChange frequently pulls a pitcher who has already allowed 4 runs in this inning, even with a fresh arm and low leverage', () => {
+  const rng = mulberry32(41);
+  const sit = situation({ inning: 1, scoreDiff: 0, runsAllowedThisInning: 4 });
+  const trials = 200;
+  let changes = 0;
+  for (let i = 0; i < trials; i++) {
+    if (decidePitchingChange(samplePitcher, 20, true, sit, rng)) changes++;
+  }
+  // The disaster hook fires with ~40% probability per attempt at exactly 4 runs.
+  assert.ok(changes > trials * 0.25, `expected >25% disaster hooks at 4 runs, got ${changes}/${trials}`);
+});
+
+test('decidePitchingChange almost always pulls a pitcher who has allowed 8 runs in this inning', () => {
+  const rng = mulberry32(42);
+  const sit = situation({ inning: 1, scoreDiff: 0, runsAllowedThisInning: 8 });
+  const trials = 200;
+  let changes = 0;
+  for (let i = 0; i < trials; i++) {
+    if (decidePitchingChange(samplePitcher, 20, true, sit, rng)) changes++;
+  }
+  // The disaster hook clamps to ~95% by 7-8 runs allowed.
+  assert.ok(changes > trials * 0.85, `expected >85% disaster hooks at 8 runs, got ${changes}/${trials}`);
+});
+
+test('decidePitchingChange never pulls the pitcher for a disaster inning when no bullpen is available', () => {
+  const rng = mulberry32(43);
+  const sit = situation({ inning: 1, scoreDiff: 0, runsAllowedThisInning: 8 });
+  for (let i = 0; i < 20; i++) {
+    assert.equal(decidePitchingChange(samplePitcher, 20, false, sit, rng), false);
+  }
+});
+
+test('omitting runsAllowedThisInning behaves identically to passing 0', () => {
+  const omitted = situation({ inning: 1, scoreDiff: 0 });
+  const explicitZero = situation({ inning: 1, scoreDiff: 0, runsAllowedThisInning: 0 });
+
+  const withDefault = decidePitchingChange(samplePitcher, 20, true, omitted, mulberry32(44));
+  const withExplicitZero = decidePitchingChange(samplePitcher, 20, true, explicitZero, mulberry32(44));
+  assert.equal(withDefault, withExplicitZero);
+});
+
 // ---------------------------------------------------------------------------
 // selectReliever
 // ---------------------------------------------------------------------------
